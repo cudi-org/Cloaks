@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net wss://cudi-sync-signalin.onrender.com ws://localhost:8080; style-src 'self'; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com; media-src 'self' blob: data:; object-src 'self' blob: data:; frame-src 'self' blob: data:; worker-src 'self' blob:;">
+  <title>CUDI Sync - P2P File Transfer</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/x-icon" href="./icons/logo.png">
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+
+<body>
+  <header class="site-header glass">
+    <div class="header-container">
+      <div class="logo">
+        <img src="./icons/logo-removebg-preview.png" alt="CUDI Logo" />
+        <span>CUDI Sync</span>
+      </div>
+      <nav class="navbar" id="navbar">
+        <a href="https://cudi-org.github.io/" target="_blank" rel="noopener noreferrer">Community</a>
+        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=breolanapp@gmail.com&su=Sync%20Project" target="_blank"
+          rel="noopener noreferrer">Contact</a>
+      </nav>
+      <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+        ☰
+      </button>
+    </div>
+  </header>
+
+  <main class="container glass">
+    <button id="return-btn" class="return-btn hidden" aria-label="Return to Menu">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+    </button>
+    <button id="settings-btn" class="settings-btn" aria-label="Settings">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+    </button>
+    <button id="help-btn" class="help-btn" aria-label="Info & Privacy">
+      ?
+    </button>
+    <h2 class="section-title">Peer-to-Peer Transfer</h2>
+
+    <div id="menu">
+      <p>What do you want to do?</p>
+      <div class="buttons">
+        <button id="tabSend" class="active-tab">Send File</button>
+        <button id="tabReceive" class="inactive-tab">Receive File</button>
+      </div>
+      <div id="send-controls" class="entry-controls">
+        <div class="input-group">
+          <input type="text" id="aliasInput" placeholder="Your Alias (Name)" class="w-full text-center"
+            autocomplete="off" maxlength="20">
+        </div>
+        <input type="text" id="customRoomInput" placeholder="Custom Code (Optional)" class="input-code"
+          autocomplete="off" maxlength="20">
+        <input type="password" id="roomPasswordInput" placeholder="Password (Optional)" class="input-code mt-5"
+          autocomplete="off" maxlength="20">
+        <div class="text-center mt-5">
+          <button id="btnCreate" class="btn-primary-small">Start Room</button>
+        </div>
+      </div>
+      <div id="recepcion" class="entry-controls w-full hidden">
+        <input type="text" id="codigoSala" placeholder="Enter Room Code" autocomplete="off" maxlength="20"
+          class="input-code" />
+        <input type="password" id="joinPasswordInput" placeholder="Room Password (if needed)" class="input-code mt-5"
+          autocomplete="off" maxlength="20" />
+        <button id="unirseBtn" class="mt-5">Join</button>
+      </div>
+    </div>
+
+    <div id="zonaTransferencia" class="hidden w-full">
+
+      <!-- Sync Live Video Container -->
+      <div id="videoContainer" class="hidden mb-20">
+        <div class="video-wrapper">
+          <video id="remoteVideo" autoplay playsinline class="video-remote"></video>
+          <div id="remoteVideoPlaceholder" class="video-placeholder hidden">
+            <svg viewBox="0 0 24 24" width="80" height="80" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <p>Camera Off</p>
+          </div>
+
+          <video id="localVideo" autoplay playsinline muted class="video-local"></video>
+          <div id="localVideoPlaceholder" class="video-local-placeholder hidden">
+            <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+
+          <!-- Watermark -->
+          <div class="watermark hidden" id="videoWatermark">
+            Powered by Sync P2P Protocol
+          </div>
+
+          <div class="video-controls">
+            <button id="btnToggleAudio" class="icon-btn glass-btn control-btn" title="Mute/Unmute">
+              <svg name="mic-on" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                <path
+                  d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+              </svg>
+            </button>
+            <button id="btnToggleVideo" class="icon-btn glass-btn control-btn" title="Camera On/Off">
+              <svg name="video-on" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path
+                  d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
+              </svg>
+            </button>
+            <button id="btnStopVideo" class="icon-btn glass-btn control-btn btn-stop" title="Hang Up">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path
+                  d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
+              </svg>
+            </button>
+            <button id="btnShareScreen" class="icon-btn glass-btn control-btn" title="Share Screen">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path
+                  d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.11-.9-2-2-2H4c-1.11 0-2 .89-2 2v10c0 1.1.89 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z" />
+                <path d="M12 13l4-4-4-4v3H8v2h4v3z" />
+              </svg>
+            </button>
+            <button id="btnFullscreen" class="icon-btn glass-btn control-btn" title="Fullscreen">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="dropZone" class="drop-area" tabindex="0" role="button" aria-label="Zone to upload files">
+        <p>Drag & Drop files here or click to select</p>
+        <input type="file" id="fileInput" hidden />
+      </div>
+
+      <div id="salaStatusContainer" class="status-container">
+        <div id="salaStatus" class="room-code-display">Room: —</div>
+        <button id="copy-link-btn" class="icon-btn hidden" title="Copy Join Link">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="room-controls" class="room-controls">
+        <div class="control-group left flex-gap-center">
+          <button id="lock-room-btn" class="icon-btn" title="Lock Room">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </button>
+
+          <button id="btnStartVideo" class="icon-btn btn-start" title="Start Call">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 7l-7 5 7 5V7z"></path>
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+            </svg>
+          </button>
+
+          <span id="connection-monitor" class="monitor-text">Initializing...</span>
+        </div>
+        <div class="control-group right">
+          <button id="panic-btn" class="panic-btn" title="PANIC: Close & Clear">PANIC</button>
+        </div>
+      </div>
+
+      <div id="status">Connecting…</div>
+
+      <div id="qrContainer"></div>
+
+      <div id="chatContainer">
+        <div id="messagesDisplay"></div>
+        <div id="chatInputContainer">
+          <input type="text" id="chatInput" placeholder="Type a message..." disabled autocomplete="off" />
+          <button id="sendChatBtn" disabled aria-label="Send message">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>
+      &copy; 2026 CUDI - Comunidad de Usuarios para la Defensa Informática | <a href="#" id="open-legal-modal"
+        class="text-inherit">Legal Notice</a>
+    </p>
+  </footer>
+
+  <div id="toast-container"></div>
+  <div id="loading-overlay" class="hidden">
+    <div class="spinner"></div>
+    <p id="loading-message">Loading...</p>
+  </div>
+
+  <!-- Info Modal -->
+  <div id="info-modal" class="modal hidden">
+    <div class="modal-content glass">
+      <span id="close-modal" class="close">&times;</span>
+      <h3> Privacy & Security</h3>
+      <p><strong>CUDI Sync</strong> uses <strong>P2P (Peer-to-Peer)</strong> technology. This means:</p>
+      <ul>
+        <li> Your files are <strong>NOT</strong> stored on any server.</li>
+        <li> Transfer is direct from device to device.</li>
+        <li> No intermediaries can read your data.</li>
+      </ul>
+      <p class="small-text">Technical note: To connect, devices momentarily exchange their public IPs.</p>
+    </div>
+  </div>
+
+  <!-- Legal Disclaimer Modal -->
+  <div id="legal-modal" class="modal hidden">
+    <div class="modal-content glass">
+      <h3>Legal Notice & Disclaimer</h3>
+      <p>This is a P2P (Peer-to-Peer) tool. This means:</p>
+      <ul>
+        <li><strong>We do not store your data.</strong> Transfer is direct between devices.</li>
+        <li>Your files do not pass through any intermediate storage server.</li>
+      </ul>
+      <p>By continuing, you accept that you are <strong>solely responsible</strong> for the content shared through this
+        platform.</p>
+      <div class="text-center mt-20">
+        <button id="legal-accept-btn">Understood, start</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-content glass">
+      <span id="close-settings-modal" class="close">&times;</span>
+      <h3>Settings</h3>
+
+      <!-- Primary Settings -->
+      <div class="settings-group" id="manual-approval-group">
+        <label>Manual Approval:</label>
+        <label class="switch">
+          <input type="checkbox" id="manual-approval-toggle">
+          <span class="slider round"></span>
+        </label>
+        <p class="setting-desc">Require approval for each person joining.</p>
+      </div>
+
+      <div class="settings-group">
+        <label>Auto-Clear Storage:</label>
+        <div class="flex-between-center">
+          <span>Clear storage on exit</span>
+          <label class="switch">
+            <input type="checkbox" id="auto-clear-toggle" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Advanced Toggle -->
+      <!-- Advanced Toggle Header -->
+      <div id="advanced-settings-toggle" class="settings-section-header cursor-pointer">
+        <span>Advanced Settings</span>
+        <svg id="advanced-arrow" class="arrow-icon" viewBox="0 0 24 24" width="20" height="20" fill="none"
+          stroke="currentColor" stroke-width="2">
+          <path d="M6 9l6 6 6-6"></path>
+        </svg>
+      </div>
+
+      <!-- Advanced Settings Section -->
+      <div id="advanced-settings-content" class="hidden">
+        <div class="settings-group">
+          <label for="stun-select">STUN Server:</label>
+          <select id="stun-select">
+            <option value="google">Google (Default) - Max Speed</option>
+            <option value="cloudflare">Cloudflare - Speed & Privacy</option>
+            <option value="mozilla">Mozilla - Privacy Focused</option>
+            <option value="twilio">Twilio - Reliability</option>
+            <option value="none">None - Local Network Only</option>
+            <option value="custom">Custom (Manual)</option>
+          </select>
+          <input type="text" id="custom-stun-input" placeholder="stun:your.server.com:3478" class="mt-5 hidden"
+            autocomplete="off" />
+          <p class="setting-desc">Server used to establish the P2P connection (IP discovery).</p>
+        </div>
+
+        <div class="settings-group">
+          <label for="filesize-select">Max File Size Limit:</label>
+          <select id="filesize-select">
+            <option value="0">No Limit</option>
+            <option value="10">10 MB</option>
+            <option value="50">50 MB</option>
+            <option value="100">100 MB</option>
+            <option value="500">500 MB</option>
+            <option value="1024">1 GB</option>
+          </select>
+          <p class="setting-desc">Warn or block files larger than this limit.</p>
+        </div>
+      </div>
+
+      <div class="text-center mt-20">
+        <button id="save-settings-btn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"
+    integrity="sha384-Dr98ddmUw2QkdCarNQ+OL7xLty7cSxgR0T7v1tq4UErS/qLV0132sBYTolRAFuOV"
+    crossorigin="anonymous"></script>
+  <script src="./js/config.js"></script>
+  <!-- Application Scripts (Non-Module for file:// support) -->
+  <script src="js/dictionary.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/file-transfer.js"></script>
+  <script src="js/signaling.js"></script>
+  <script src="js/webrtc.js"></script>
+  <script src="js/main.js" defer></script>
+</body>
+
+</html>

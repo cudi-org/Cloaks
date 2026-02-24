@@ -1,0 +1,16 @@
+.visible-flex {
+    display: flex !important;
+}
+
+#zonaTransferencia {
+    width: 100%;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.hidden {
+    display: none !important;
+}
