@@ -248,7 +248,7 @@ const communityManager = {
                     window.Cudi.displayChatMessage(msg.text || msg.message, "received", msg.alias);
                 }
             });
-        } catch (e) {
+        } catch {
             console.log("No history found for channel:", channelId);
         }
     },

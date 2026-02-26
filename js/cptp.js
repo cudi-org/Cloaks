@@ -40,7 +40,7 @@ const CPTP = {
             this.sendPart(channel, index, file);
         };
 
-        channel.onmessage = (e) => {
+        channel.onmessage = () => {
             // Handle ACKs if needed
         };
     },

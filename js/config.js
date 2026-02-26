@@ -1,4 +1,5 @@
-const CONFIG = {
+window.Cudi = window.Cudi || {};
+window.Cudi.CONFIG = {
     SIGNALING_SERVER_URL: 'wss://cloaks-signalin.onrender.com',
     HEARTBEAT_INTERVAL: 30000,
     ICE_SERVERS: [

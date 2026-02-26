@@ -85,7 +85,9 @@ window.Cudi.connectToSignaling = function () {
                 const mensaje = JSON.parse(texto);
                 console.log(`📥 [Signaling] Mensaje recibido (Blob): ${mensaje.type} desde ${mensaje.fromPeerId || 'Servidor'}`);
                 if (window.Cudi.manejarMensaje) window.Cudi.manejarMensaje(mensaje);
-            } catch { }
+            } catch (err) {
+                console.error("Error parsing signaling Blob:", err);
+            }
         }
     });
 }

@@ -280,8 +280,6 @@ function manejarChunk(data, peerId) {
         }
     } else {
         // ... binary handling ...
-        const buffer = (data instanceof Blob) ? null : data;
-
         if (data instanceof Blob) {
             const reader = new FileReader();
             reader.onload = () => window.Cudi.processBuffer(reader.result);

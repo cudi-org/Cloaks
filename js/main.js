@@ -29,8 +29,6 @@ const tabSend = document.getElementById("tabSend");
 const tabReceive = document.getElementById("tabReceive");
 const btnCreate = document.getElementById("btnCreate");
 const btnJoin = document.getElementById("unirseBtn");
-const sendControls = document.getElementById("send-controls");
-const recepcionDiv = document.getElementById("recepcion");
 const helpBtn = document.getElementById("help-btn");
 const returnBtn = document.getElementById("return-btn");
 const infoModal = document.getElementById("info-modal");
@@ -120,13 +118,6 @@ function crearSala() {
         }
     }
     window.Cudi.showToast("Room created. Access via Sidebar for info.", "info");
-}
-
-function mostrarRecepcion() {
-    document.getElementById("recepcion").classList.remove("hidden");
-    // Show password input for joiner if hidden? 
-    // We will share the same input or a new one. 
-    // Let's assume a join password input exists in the 'recepcion' div.
 }
 
 function unirseSala() {
@@ -250,7 +241,7 @@ if (dropZone) {
 }
 
 if (fileInput) {
-    fileInput.addEventListener("change", (e) => {
+    fileInput.addEventListener("change", () => {
         if (fileInput.files.length > 0) {
             window.Cudi.handleFileSelection(fileInput.files[0]);
         }
@@ -493,7 +484,7 @@ function loadSettings() {
     return DEFAULT_SETTINGS;
 }
 
-function saveSettings(settings) {
+window.Cudi.saveSettings = function (settings) {
     localStorage.setItem("cudi_settings", JSON.stringify(settings));
     window.currentSettings = settings;
     window.Cudi.showToast("Settings saved!", "success");

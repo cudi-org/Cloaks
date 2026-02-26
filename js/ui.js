@@ -162,7 +162,7 @@ window.Cudi.ui = {
         messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
     },
 
-    displayFileDownload(filename, url, type, alias, isVerified = false) {
+    displayFileDownload(filename, url, type, alias) {
         const messagesDisplay = document.getElementById("messagesDisplay");
         if (!messagesDisplay) return;
 
