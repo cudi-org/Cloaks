@@ -16,12 +16,13 @@ window.Cudi = window.Cudi || {};
         },
 
         async loadHistory(peerId) {
+            if (!peerId || peerId === 'state') return [];
             console.log(`📂 [OPFS] Intentando cargar historial de: ${peerId}`);
             const root = await this.getDirectory();
             if (!root) return [];
 
             try {
-                // Check for both legacy and new naming
+                // Check for both naming conventions
                 const fileName = `chat_${peerId}.json`;
                 let fileHandle;
                 try {
@@ -36,11 +37,15 @@ window.Cudi = window.Cudi || {};
 
                 const file = await fileHandle.getFile();
                 const text = await file.text();
-                if (!text) return [];
-                return JSON.parse(text);
+
+                // VITAL: Si no hay texto, devolver []. Si hay, parsear.
+                const data = text ? JSON.parse(text) : [];
+
+                // Doble check: si lo que parseamos no es array, lo devuelve vacío
+                return Array.isArray(data) ? data : [];
             } catch (e) {
-                console.error("Error loading history from OPFS", e);
-                return [];
+                console.error("📂 [OPFS] Error cargando historial:", e);
+                return []; // Siempre devuelve un array para que forEach no explote
             }
         },
 

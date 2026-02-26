@@ -58,13 +58,18 @@ window.Cudi.ui = {
     },
 
     switchChat(peerId) {
+        if (!peerId || peerId === 'state') return;
+        console.log(`📂 [OPFS] Intentando cargar historial de: ${peerId}`);
+
         window.Cudi.state.currentPeerId = peerId;
         document.getElementById('current-channel-name').textContent = peerId;
         this.updateChatHeader(peerId);
         // Load history
         window.Cudi.loadHistory(peerId).then(history => {
             const display = document.getElementById('messagesDisplay');
+            if (!display) return;
             display.innerHTML = '';
+            // history is guaranteed array by opfs.js fix
             history.forEach(msg => {
                 window.Cudi.displayChatMessage(msg.content, msg.sender === window.Cudi.state.myId ? 'sent' : 'received', msg.sender);
             });
@@ -264,6 +269,23 @@ window.Cudi.ui = {
 window.Cudi.displayChatMessage = (m, t, a) => window.Cudi.ui.displayChatMessage(m, t, a);
 window.Cudi.displayFileDownload = (f, u, t, a, v) => window.Cudi.ui.displayFileDownload(f, u, t, a, v);
 window.Cudi.displayIncomingFileRequest = (f, s, o) => window.Cudi.ui.displayIncomingFileRequest(f, s, o);
+
+// Toast Notifications
+window.showToast = function (message, type = "info") {
+    console.log(`🍞 [Toast] [${type}]:`, message);
+    const toast = document.createElement('div');
+    toast.className = `cloak-toast ${type}`;
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+        toast.style.transition = 'all 0.5s ease';
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+};
+
+window.Cudi.showToast = window.showToast;
 
 document.addEventListener('DOMContentLoaded', () => {
     window.Cudi.ui.init();

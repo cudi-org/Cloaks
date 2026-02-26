@@ -78,6 +78,36 @@ body {
   color: var(--text-normal);
 }
 
+/* Toast Notifications */
+.cloak-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--bg-input);
+  color: var(--text-light);
+  padding: 12px 24px;
+  border-radius: 8px;
+  border-left: 4px solid var(--accent-cyan);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  font-size: 14px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+
 .app-shell {
   display: flex;
   height: 100vh;
