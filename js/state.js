@@ -16,6 +16,9 @@ window.Cudi.state = {
     heartbeatInterval: null,
     localAlias: localStorage.getItem('cudi_alias') || "You",
     remoteAlias: null,
+    peers: new Map(), // Track multiple peers
+    activeChats: new Map(), // Track WebRTC connections per peerId
+    isZeroTrace: localStorage.getItem('cloaks_zero_trace') === 'true',
 };
 
 let loaded = { stun: "google" };
@@ -47,9 +50,9 @@ window.Cudi.ICE_SERVERS = (typeof CONFIG !== 'undefined' && CONFIG.ICE_SERVERS)
     ? CONFIG.ICE_SERVERS
     : { iceServers: settingsIce };
 
-window.Cudi.appType = "cudi-sync";
+window.Cudi.appType = "cloaks";
 window.Cudi.CHUNK_SIZE = 16 * 1024;
 
 window.Cudi.SIGNALING_SERVER_URL = (typeof CONFIG !== 'undefined' && CONFIG.SIGNALING_SERVER_URL)
     ? CONFIG.SIGNALING_SERVER_URL
-    : 'wss://cudi-sync-signalin.onrender.com';
+    : 'wss://cloaks-signalin.onrender.com';

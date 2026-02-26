@@ -1,251 +1,271 @@
-window.Cudi.elements = {
-    dropZone: document.getElementById("dropZone"),
-    fileInput: document.getElementById("fileInput"),
-    salaStatus: document.getElementById("salaStatus"),
-    qrContainer: document.getElementById("qrContainer"),
-    chatInput: document.getElementById("chatInput"),
-    sendChatBtn: document.getElementById("sendChatBtn"),
-    messagesDisplay: document.getElementById("messagesDisplay"),
-    menuToggle: document.getElementById("menu-toggle"),
-    navbar: document.getElementById("navbar"),
-    loadingOverlay: document.getElementById("loading-overlay"),
-    loadingMessage: document.getElementById("loading-message"),
-    connectionMonitor: document.getElementById("connection-monitor"),
-    lockRoomBtn: document.getElementById("lock-room-btn"),
-    panicBtn: document.getElementById("panic-btn"),
-    recepcionDiv: document.getElementById("recepcion"),
-    menuDiv: document.getElementById("menu"),
-    zonaTransferenciaDiv: document.getElementById("zonaTransferencia"),
-};
+window.Cudi.ui = {
+    init() {
+        this.bindZeroTrace();
+        this.renderRecentChats();
+    },
 
-window.Cudi.displayChatMessage = function (message, type, alias) {
-    const messagesDisplay = document.getElementById("messagesDisplay");
-    if (!messagesDisplay) return;
+    bindZeroTrace() {
+        const btn = document.getElementById('zero-trace-btn');
+        const inputArea = document.querySelector('.chat-input-area');
 
-    const p = document.createElement("p");
-
-    // Determine info to show
-    let displayAlias = alias;
-    // Fallback if empty
-    if (!displayAlias || displayAlias.trim() === "") {
-        displayAlias = (type === "sent") ? "You" : "Guest";
-    }
-
-    if (displayAlias === "System") {
-        p.classList.add("system-message");
-        p.textContent = message;
-    } else {
-        // Always show the Name for clarity in chatting
-        const userSpan = document.createElement("strong");
-        userSpan.textContent = displayAlias;
-        userSpan.style.display = "block";
-        userSpan.style.fontSize = "0.75rem";
-        userSpan.style.marginBottom = "4px";
-        userSpan.style.opacity = "0.8";
-        // Sent messages header lighter, Received darker (or logic from styles)
-        userSpan.style.color = (type === "sent") ? "#f0f0f0" : "#555";
-        p.appendChild(userSpan);
-
-        const msgSpan = document.createElement("span");
-        msgSpan.textContent = message;
-        p.appendChild(msgSpan);
-    }
-
-    p.classList.add(type);
-    messagesDisplay.appendChild(p);
-    messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
-}
-
-window.Cudi.displayFileDownload = function (filename, url, type, alias, isVerified = false) {
-    const messagesDisplay = document.getElementById("messagesDisplay");
-    if (!messagesDisplay) return;
-
-    const p = document.createElement("p");
-
-    // Determine info to show
-    let displayAlias = alias;
-    if (!displayAlias || displayAlias.trim() === "") {
-        displayAlias = (type === "sent") ? "You" : "Guest";
-    }
-
-    if (displayAlias && displayAlias !== "System") {
-        const userSpan = document.createElement("strong");
-        userSpan.textContent = displayAlias;
-        userSpan.style.display = "block";
-        userSpan.style.fontSize = "0.75rem";
-        userSpan.style.marginBottom = "4px";
-        userSpan.style.color = (type === "sent") ? "#eee" : "#555";
-        p.appendChild(userSpan);
-    }
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "media-wrapper";
-
-    // Media Logic
-    const ext = filename.split('.').pop().toLowerCase();
-    let mediaElement = null;
-
-    if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
-        // Image
-        mediaElement = document.createElement('img');
-        mediaElement.src = url;
-        mediaElement.className = 'chat-media-img';
-        mediaElement.onclick = () => {
-            const win = window.open();
-            if (win) {
-                win.document.write('<img src="' + url + '" style="width:100%; height:auto;">');
+        const updateUI = () => {
+            const isActive = window.Cudi.state.isZeroTrace;
+            if (isActive) {
+                inputArea.classList.add('zero-trace-active');
+                if (!document.getElementById('zero-trace-warn')) {
+                    const warn = document.createElement('div');
+                    warn.id = 'zero-trace-warn';
+                    warn.className = 'zero-trace-warning';
+                    warn.textContent = 'Modo Zero-Trace activo: los mensajes morirán con esta pestaña';
+                    inputArea.appendChild(warn);
+                }
+            } else {
+                inputArea.classList.remove('zero-trace-active');
+                document.getElementById('zero-trace-warn')?.remove();
             }
         };
-    } else if (['mp3', 'wav', 'ogg'].includes(ext)) {
-        // Audio
-        mediaElement = document.createElement('audio');
-        mediaElement.src = url;
-        mediaElement.controls = true;
-        mediaElement.className = 'chat-media-audio';
-    } else if (['mp4', 'webm'].includes(ext)) {
-        // Video
-        mediaElement = document.createElement('video');
-        mediaElement.src = url;
-        mediaElement.controls = true;
-        mediaElement.playsInline = true;
-        mediaElement.className = 'chat-media-video';
-    } else if (ext === 'pdf') {
-        // PDF Preview - Using iframe for better compatibility
-        mediaElement = document.createElement('iframe');
-        mediaElement.src = url;
-        mediaElement.className = 'chat-media-pdf';
-        mediaElement.title = "PDF Preview";
-    }
 
-    if (mediaElement) {
-        wrapper.appendChild(mediaElement);
-    }
+        btn?.addEventListener('click', () => {
+            window.Cudi.state.isZeroTrace = !window.Cudi.state.isZeroTrace;
+            localStorage.setItem('cloaks_zero_trace', window.Cudi.state.isZeroTrace);
+            updateUI();
+            window.Cudi.showToast(window.Cudi.state.isZeroTrace ? "Zero-Trace Enabled" : "Zero-Trace Disabled", "info");
+        });
 
-    // Header (Filename + Download)
-    const headerDiv = document.createElement("div");
-    headerDiv.className = "media-header";
+        updateUI();
+    },
 
-    const textSpan = document.createElement("span");
-    textSpan.textContent = filename.length > 25 ? filename.substring(0, 22) + '...' : filename;
-    textSpan.title = filename;
-    headerDiv.appendChild(textSpan);
+    async renderRecentChats() {
+        const sidebar = document.getElementById('channel-list');
+        if (!sidebar) return;
 
-    // Verified Badge
-    if (isVerified) {
-        const verifiedBadge = document.createElement("span");
-        verifiedBadge.title = "Verified Integrity (SHA-256)";
-        verifiedBadge.style.color = "#28a745"; // Green
-        verifiedBadge.style.marginLeft = "5px";
-        verifiedBadge.style.cursor = "help";
-        verifiedBadge.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>`;
-        headerDiv.appendChild(verifiedBadge);
-    }
+        const recent = await window.Cudi.opfs.getRecentChats();
+        if (recent.length === 0) return;
 
-    // Button Container
-    const btnContainer = document.createElement("div");
-    btnContainer.style.display = "flex";
-    btnContainer.style.gap = "8px";
+        sidebar.innerHTML = '<h4>RECENT CHATS</h4>';
+        recent.forEach(peerId => {
+            const item = document.createElement('div');
+            item.className = 'channel-item';
+            item.textContent = peerId; // Could be alias later
+            item.onclick = () => this.switchChat(peerId);
 
-    // Extra "Open" button for PDF
-    // Removed for audio/video as requested by user
-    if (ext === 'pdf') {
-        const openBtn = document.createElement("button");
-        openBtn.className = "download-btn-icon";
-        openBtn.title = "Open in New Tab";
-        openBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
-        openBtn.onclick = () => window.open(url, '_blank');
-        btnContainer.appendChild(openBtn);
-    }
+            // Status Indicator
+            const online = window.Cudi.state.activeChats.has(peerId);
+            item.style.color = online ? 'var(--accent-cyan)' : 'var(--text-muted)';
 
-    const btn = document.createElement("button");
-    btn.className = "download-btn-icon";
-    btn.title = "Download";
-    btn.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-      <polyline points="7 10 12 15 17 10"></polyline>
-      <line x1="12" y1="15" x2="12" y2="3"></line>
-    </svg>
-  `;
+            sidebar.appendChild(item);
+        });
+    },
 
-    btn.onclick = () => {
-        // Basic download via link
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+    switchChat(peerId) {
+        window.Cudi.state.currentPeerId = peerId;
+        document.getElementById('current-channel-name').textContent = peerId;
+        this.updateChatHeader(peerId);
+        // Load history
+        window.Cudi.loadHistory(peerId).then(history => {
+            const display = document.getElementById('messagesDisplay');
+            display.innerHTML = '';
+            history.forEach(msg => {
+                window.Cudi.displayChatMessage(msg.content, msg.sender === window.Cudi.state.myId ? 'sent' : 'received', msg.sender);
+            });
+        });
+    },
 
-        // Memory cleanup: Revoke the URL after download starts -- deferred to avoid breaking playback
-        // In media case, we might want to keep it longer or not revoke until session end?
-        // Let's keep existing logic but careful with loops.
-        // Actually, if it's playing, we shouldn't revoke. 
-        // We already have the Blob URL provided.
-    };
+    updateChatHeader(peerId) {
+        const peer = window.Cudi.state.peers.get(peerId);
+        const headerInfo = document.getElementById('header-peer-info');
+        if (!peer || !headerInfo) return;
 
-    btnContainer.appendChild(btn);
-    headerDiv.appendChild(btnContainer);
-    wrapper.appendChild(headerDiv);
+        headerInfo.classList.remove('hidden');
+        document.getElementById('current-channel-name').textContent = peer.alias || peerId;
+        document.getElementById('peer-pronouns').textContent = peer.pronouns ? `(${peer.pronouns})` : '';
 
-    p.appendChild(wrapper);
-
-    p.className = type;
-    messagesDisplay.appendChild(p);
-    messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
-}
-
-window.Cudi.displayIncomingFileRequest = function (filename, size, onAccept) {
-    const messagesDisplay = document.getElementById("messagesDisplay");
-    if (!messagesDisplay) return;
-
-    const p = document.createElement("p");
-    p.className = "received";
-
-    const container = document.createElement("div");
-    container.style.background = "rgba(0, 0, 0, 0.05)";
-    container.style.padding = "10px";
-    container.style.borderRadius = "8px";
-    container.style.borderLeft = "4px solid #5162FA";
-    container.style.maxWidth = "300px";
-
-    const title = document.createElement("div");
-    title.innerHTML = `<strong>📄 Incoming File Request</strong>`;
-    title.style.marginBottom = "5px";
-
-    const info = document.createElement("div");
-    info.textContent = `${filename} (${(size / 1024 / 1024).toFixed(2)} MB)`;
-    info.style.fontSize = "0.9rem";
-    info.style.marginBottom = "10px";
-
-    const btn = document.createElement("button");
-    btn.innerHTML = "💾 Save to Disk (Recommended)";
-    btn.style.background = "#5162FA";
-    btn.style.color = "white";
-    btn.style.border = "none";
-    btn.style.padding = "8px 16px";
-    btn.style.borderRadius = "4px";
-    btn.style.cursor = "pointer";
-    btn.style.width = "100%";
-    btn.style.fontWeight = "bold";
-
-    btn.onclick = async () => {
-        btn.disabled = true;
-        btn.innerHTML = "⏳ Initializing...";
-        const result = await onAccept();
-        if (result) {
-            container.innerHTML = `<strong>✅ Starting Download...</strong><br><small>${filename}</small>`;
+        const spotify = document.getElementById('peer-spotify');
+        if (peer.activity) {
+            spotify.innerHTML = `<span class="spotify-dot"></span> ${peer.activity}`;
         } else {
-            btn.disabled = false;
-            btn.innerHTML = "💾 Save to Disk (Retry)";
+            spotify.innerHTML = '';
         }
-    };
+    },
 
-    container.appendChild(title);
-    container.appendChild(info);
-    container.appendChild(btn);
-    p.appendChild(container);
+    updateMemberSidebar() {
+        const list = document.getElementById('member-list');
+        const count = document.getElementById('peer-count');
+        if (!list) return;
 
-    messagesDisplay.appendChild(p);
-    messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
+        list.innerHTML = '';
+        const peers = window.Cudi.state.peers;
+        count.textContent = peers.size;
+
+        peers.forEach((peer, id) => {
+            const item = document.createElement('div');
+            item.className = 'member-item';
+
+            const online = window.Cudi.state.activeChats.has(id);
+
+            item.innerHTML = `
+                <div class="user-avatar-wrapper">
+                    <img src="${peer.photo || './icons/logo.png'}" class="avatar-small">
+                    <span class="status-dot ${online ? 'social' : 'ghost'}"></span>
+                </div>
+                <div class="member-name">${peer.alias || id}</div>
+            `;
+            list.appendChild(item);
+        });
+    },
+
+    displayChatMessage(message, type, alias) {
+        const messagesDisplay = document.getElementById("messagesDisplay");
+        if (!messagesDisplay) return;
+
+        const item = document.createElement("div");
+        item.className = `message-item ${type}`;
+
+        const avatar = document.createElement("img");
+        avatar.className = "msg-avatar";
+        avatar.src = (type === "sent") ? (document.getElementById('user-avatar-small')?.src || "./icons/logo.png") : "./icons/logo.png";
+
+        const content = document.createElement("div");
+        content.className = "msg-content";
+
+        const header = document.createElement("div");
+        header.className = "msg-header";
+
+        const author = document.createElement("span");
+        author.className = "msg-author";
+        author.textContent = alias || ((type === "sent") ? "You" : "Guest");
+
+        const time = document.createElement("span");
+        time.className = "msg-time";
+        const now = new Date();
+        time.textContent = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+        header.appendChild(author);
+        header.appendChild(time);
+
+        const text = document.createElement("div");
+        text.className = "msg-text";
+        text.textContent = message;
+
+        content.appendChild(header);
+        content.appendChild(text);
+
+        item.appendChild(avatar);
+        item.appendChild(content);
+
+        messagesDisplay.appendChild(item);
+        messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
+    },
+
+    displayFileDownload(filename, url, type, alias, isVerified = false) {
+        const messagesDisplay = document.getElementById("messagesDisplay");
+        if (!messagesDisplay) return;
+
+        const item = document.createElement("div");
+        item.className = `message-item ${type}`;
+
+        const avatar = document.createElement("img");
+        avatar.className = "msg-avatar";
+        avatar.src = (type === "sent") ? (document.getElementById('user-avatar-small')?.src || "./icons/logo.png") : "./icons/logo.png";
+
+        const content = document.createElement("div");
+        content.className = "msg-content";
+
+        const header = document.createElement("div");
+        header.className = "msg-header";
+
+        const author = document.createElement("span");
+        author.className = "msg-author";
+        author.textContent = alias || ((type === "sent") ? "You" : "Guest");
+
+        const time = document.createElement("span");
+        time.className = "msg-time";
+        const now = new Date();
+        time.textContent = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+        header.appendChild(author);
+        header.appendChild(time);
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "media-wrapper";
+        wrapper.style.backgroundColor = "var(--bg-input)";
+        wrapper.style.padding = "12px";
+        wrapper.style.borderRadius = "8px";
+        wrapper.style.marginTop = "4px";
+
+        const fileMeta = document.createElement("div");
+        fileMeta.style.display = "flex";
+        fileMeta.style.alignItems = "center";
+        fileMeta.style.gap = "12px";
+
+        const fileInfo = document.createElement("div");
+        fileInfo.innerHTML = `<div style="color: var(--text-light); font-weight: 600;">${filename}</div>`;
+
+        const dlBtn = document.createElement("button");
+        dlBtn.textContent = "Download";
+        dlBtn.className = "Discord-btn-primary";
+        dlBtn.style.padding = "4px 12px";
+        dlBtn.style.width = "auto";
+        dlBtn.style.marginTop = "8px";
+        dlBtn.onclick = () => {
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            a.click();
+        };
+
+        fileMeta.appendChild(fileInfo);
+        wrapper.appendChild(fileMeta);
+        wrapper.appendChild(dlBtn);
+
+        content.appendChild(header);
+        content.appendChild(wrapper);
+
+        item.appendChild(avatar);
+        item.appendChild(content);
+
+        messagesDisplay.appendChild(item);
+        messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
+    },
+
+    displayIncomingFileRequest(filename, size, onAccept) {
+        const messagesDisplay = document.getElementById("messagesDisplay");
+        if (!messagesDisplay) return;
+
+        const container = document.createElement("div");
+        container.className = "message-item received";
+        container.innerHTML = `
+            <div class="msg-content" style="background: var(--bg-input); padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent-cyan);">
+                <strong>📄 Incoming File Request</strong>
+                <div style="font-size: 0.9rem; margin: 5px 0;">${filename} (${(size / 1024 / 1024).toFixed(2)} MB)</div>
+                <button class="discord-btn-primary" id="accept-file-btn">💾 Save to Disk</button>
+            </div>
+        `;
+
+        const btn = container.querySelector("#accept-file-btn");
+        btn.onclick = async () => {
+            btn.disabled = true;
+            btn.textContent = "⏳ Initializing...";
+            const result = await onAccept();
+            if (result) {
+                container.innerHTML = `<div class="msg-content" style="color: var(--status-green)">✅ Starting Download: ${filename}</div>`;
+            } else {
+                btn.disabled = false;
+                btn.textContent = "💾 Save to Disk (Retry)";
+            }
+        };
+
+        messagesDisplay.appendChild(container);
+        messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
+    }
 };
+
+// Aliases for compatibility
+window.Cudi.displayChatMessage = (m, t, a) => window.Cudi.ui.displayChatMessage(m, t, a);
+window.Cudi.displayFileDownload = (f, u, t, a, v) => window.Cudi.ui.displayFileDownload(f, u, t, a, v);
+window.Cudi.displayIncomingFileRequest = (f, s, o) => window.Cudi.ui.displayIncomingFileRequest(f, s, o);
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.Cudi.ui.init();
+});
+

@@ -40,7 +40,7 @@ const closeModal = document.getElementById("close-modal");
 function crearSala() {
     const customInput = document.getElementById("customRoomInput");
     const passwordInput = document.getElementById("roomPasswordInput");
-    const customCode = customInput.value.trim().toLowerCase();
+    const customCode = customInput ? customInput.value.trim().toLowerCase() : "";
     const password = passwordInput ? passwordInput.value.trim() : "";
 
     if (customCode) {
@@ -81,8 +81,12 @@ function crearSala() {
         copyLinkBtn.parentNode.replaceChild(newBtn, copyLinkBtn);
 
         newBtn.addEventListener("click", () => {
-            const url = window.location.href.replace("send-", "receive-");
-            // Ideally we get the full tokenified URL if server provided one, otherwise normal link
+            const state = window.Cudi.state;
+            let url = window.location.href.replace("send-", "receive-");
+            if (state.roomToken) {
+                url += `&token=${state.roomToken}`;
+            }
+
             navigator.clipboard.writeText(url).then(() => {
                 window.Cudi.showToast("Link copied to clipboard!", "success");
             }).catch(err => {
@@ -92,25 +96,30 @@ function crearSala() {
     }
 
     // Clear QR
-    qrContainer.innerHTML = "";
+    if (qrContainer) {
+        qrContainer.innerHTML = "";
+        qrContainer.classList.remove("hidden"); // Ensure it's visible
 
-    const urlParaRecibir = `${window.location.origin}${window.location.pathname}#receive-${window.Cudi.state.salaId}`;
-    if (typeof QRious !== 'undefined') {
-        try {
-            const qr = new QRious({
-                element: document.createElement("canvas"),
-                size: 220,
-                value: urlParaRecibir,
-            });
-            qrContainer.appendChild(qr.element);
-        } catch (e) {
-            console.error("QR Error", e);
-            qrContainer.textContent = "Error generating QR";
+        const baseUrl = window.location.href.split('#')[0];
+        const urlParaRecibir = `${baseUrl}#receive-${window.Cudi.state.salaId}`;
+
+        if (typeof QRious !== 'undefined') {
+            try {
+                const qr = new QRious({
+                    element: document.createElement("canvas"),
+                    size: 220,
+                    value: urlParaRecibir,
+                });
+                qrContainer.appendChild(qr.element);
+            } catch (e) {
+                console.error("QR Error", e);
+                qrContainer.textContent = "Error generating QR";
+            }
+        } else {
+            qrContainer.textContent = "QR Library not loaded.";
         }
-    } else {
-        qrContainer.textContent = "QR Library not loaded.";
     }
-    window.Cudi.showToast("Room created. Waiting for connection...", "info");
+    window.Cudi.showToast("Room created. Access via Sidebar for info.", "info");
 }
 
 function mostrarRecepcion() {
@@ -144,13 +153,16 @@ function unirseSala() {
 }
 
 function iniciarTransferencia() {
-    document.getElementById("menu").classList.add("hidden");
-    document.getElementById("recepcion").classList.add("hidden");
+    document.getElementById("welcome-screen").classList.add("hidden");
+    const messagesDisplay = document.getElementById("messagesDisplay");
+    messagesDisplay.classList.remove("hidden");
+
     const zona = document.getElementById("zonaTransferencia");
     zona.classList.remove("hidden");
-    zona.classList.add("visible-flex"); // Force visibility via new class
 
-    if (returnBtn) returnBtn.classList.remove("hidden");
+    const qrCont = document.getElementById("qrContainer");
+    if (qrCont && window.Cudi.state.modo === "send") qrCont.classList.remove("hidden");
+
     if (salaStatus) salaStatus.textContent = window.Cudi.state.salaId + (window.Cudi.state.roomPassword ? " (🔒)" : "");
 
     const copyLinkBtn = document.getElementById("copy-link-btn");
@@ -162,8 +174,9 @@ function iniciarTransferencia() {
         copyLinkBtn.parentNode.replaceChild(newBtn, copyLinkBtn);
 
         newBtn.addEventListener("click", () => {
-            const url = window.location.href.replace("send-", "receive-").replace("#receive-", "#receive-");
-            // Logic to ensure it's a receive link mostly handled by current URL if state is receive
+            const baseUrl = window.location.href.split('#')[0];
+            const url = `${baseUrl}#receive-${window.Cudi.state.salaId}`;
+
             navigator.clipboard.writeText(url).then(() => {
                 window.Cudi.showToast("Link copied to clipboard!", "success");
             }).catch(err => {
@@ -172,7 +185,9 @@ function iniciarTransferencia() {
         });
     }
 
-    document.querySelector('.container').classList.add('glass');
+    // document.querySelector('.container').classList.add('glass'); // Removed as .container no longer exists
+    const appShell = document.querySelector('.app-shell');
+    if (appShell) appShell.classList.add('in-room');
 
     window.Cudi.iniciarConexion();
 
@@ -246,9 +261,32 @@ if (sendChatBtn && chatInput) {
     sendChatBtn.addEventListener("click", () => {
         const message = chatInput.value.trim();
         const state = window.Cudi.state;
-        if (message && state.dataChannel && state.dataChannel.readyState === "open") {
+        const peerId = state.currentPeerId;
+
+        if (!peerId) {
+            // Fallback for single-peer mode if any
+            const firstPeerId = state.activeChats.keys().next().value;
+            if (firstPeerId) state.currentPeerId = firstPeerId;
+            else return;
+        }
+
+        const instance = state.activeChats.get(state.currentPeerId);
+        if (message && instance && instance.dc && instance.dc.readyState === "open") {
             const myAlias = state.localAlias;
-            state.dataChannel.send(JSON.stringify({ type: "chat", message: message, alias: myAlias }));
+            const payload = {
+                type: "chat",
+                subType: "text",
+                content: message,
+                alias: myAlias,
+                timestamp: Date.now(),
+                sender: state.myId
+            };
+
+            instance.dc.send(JSON.stringify(payload));
+
+            // Persist
+            window.Cudi.appendMessage(state.currentPeerId, payload);
+
             window.Cudi.displayChatMessage(message, "sent", myAlias);
             chatInput.value = "";
         }
@@ -284,23 +322,35 @@ window.addEventListener("load", () => {
             iniciarTransferencia();
             if (salaStatus) salaStatus.textContent = window.Cudi.state.salaId;
             // Re-gen QR if needed
-            const urlParaRecibir = `${window.location.origin}${window.location.pathname}#receive-${window.Cudi.state.salaId}`;
+            const baseUrl = window.location.href.split('#')[0];
+            const urlParaRecibir = `${baseUrl}#receive-${window.Cudi.state.salaId}`;
             if (qrContainer && typeof QRious !== 'undefined') {
                 qrContainer.innerHTML = "";
-                const qr = new QRious({
-                    element: document.createElement("canvas"),
-                    size: 220,
-                    value: urlParaRecibir,
-                });
-                qrContainer.appendChild(qr.element);
+                qrContainer.classList.remove("hidden");
+                try {
+                    const qr = new QRious({
+                        element: document.createElement("canvas"),
+                        size: 220,
+                        value: urlParaRecibir,
+                    });
+                    qrContainer.appendChild(qr.element);
+                } catch (e) { console.error(e); }
             }
 
         } else if (hash.startsWith("receive-")) {
-            window.Cudi.state.salaId = hash.replace("receive-", "").toLowerCase();
+            const parts = hash.split('&');
+            window.Cudi.state.salaId = parts[0].replace("receive-", "").toLowerCase();
+            if (parts[1] && parts[1].startsWith("token=")) {
+                window.Cudi.state.roomToken = parts[1].replace("token=", "");
+            }
             window.Cudi.state.modo = "receive";
             iniciarTransferencia();
             const recepcion = document.getElementById("recepcion");
-            if (recepcion) recepcion.style.display = "block";
+            if (recepcion) {
+                recepcion.classList.remove("hidden");
+                const codeInp = document.getElementById("codigoSala");
+                if (codeInp) codeInp.value = window.Cudi.state.salaId;
+            }
         }
     }
 });
@@ -316,25 +366,22 @@ if (btnJoin) btnJoin.addEventListener("click", unirseSala);
 
 if (tabSend) {
     tabSend.addEventListener("click", () => {
-        tabSend.classList.add('active-tab');
-        tabSend.classList.remove('inactive-tab');
-        tabReceive.classList.remove('active-tab');
-        tabReceive.classList.add('inactive-tab');
-
-        if (sendControls) sendControls.classList.remove('hidden');
-        if (recepcionDiv) recepcionDiv.classList.add('hidden');
+        document.getElementById("send-controls").classList.remove("hidden");
+        document.getElementById("recepcion").classList.add("hidden");
     });
 }
 
 if (tabReceive) {
     tabReceive.addEventListener("click", () => {
-        tabReceive.classList.add('active-tab');
-        tabReceive.classList.remove('inactive-tab');
-        tabSend.classList.remove('active-tab');
-        tabSend.classList.add('inactive-tab');
+        document.getElementById("recepcion").classList.remove("hidden");
+        document.getElementById("send-controls").classList.add("hidden");
+    });
+}
 
-        if (recepcionDiv) recepcionDiv.classList.remove('hidden');
-        if (sendControls) sendControls.classList.add('hidden');
+const btnCreateComm = document.getElementById("btnCreateCommunity");
+if (btnCreateComm) {
+    btnCreateComm.addEventListener("click", () => {
+        if (window.communityManager) window.communityManager.generateCommunity();
     });
 }
 
@@ -509,21 +556,20 @@ if (settingsBtn && settingsModal && closeSettingsModal && saveSettingsBtn) {
         settingsModal.classList.add("hidden");
     });
 
+    settingsBtn.addEventListener("click", () => {
+        if (settingsModal) {
+            settingsModal.classList.remove("hidden");
+        }
+    });
+
+    closeSettingsModal.addEventListener("click", () => {
+        settingsModal.classList.add("hidden");
+    });
+
     settingsModal.addEventListener("click", (e) => {
         if (e.target === settingsModal) {
             settingsModal.classList.add("hidden");
         }
-    });
-
-    saveSettingsBtn.addEventListener("click", () => {
-        const newSettings = {
-            stun: stunSelect.value,
-            customStun: (customStunInput && stunSelect.value === "custom") ? customStunInput.value.trim() : "",
-            maxFileSize: filesizeSelect.value,
-            manualApproval: manualApprovalToggle.checked,
-            autoClear: autoClearToggle.checked
-        };
-        saveSettings(newSettings);
     });
 }
 
@@ -545,6 +591,8 @@ window.addEventListener("beforeunload", () => {
         localStorage.clear();
         sessionStorage.clear();
     }
+    // Requirement 2.3: Auto-Cleanup
+    if (window.Cudi.autoCleanup) window.Cudi.autoCleanup();
 });
 
 // Video Call Logic

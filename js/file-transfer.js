@@ -50,16 +50,23 @@ window.Cudi.enviarArchivo = async function () {
         return;
     }
 
-    // 1. Send Meta (No global hash, we will verify per chunk)
-    // Send "await_acceptance" hint so receiver knows we are waiting
+    // CPTP Integration (Día 5)
+    if (file.size > 1024 * 1024 * 1024) { // > 1GB
+        if (window.CPTP) {
+            window.CPTP.initTransfer(file);
+            return;
+        }
+    }
+
+    // Standard Single Channel Transfer (Default)
     try {
         state.dataChannel.send(JSON.stringify({
             type: "meta",
             nombre: file.name,
             tamaño: file.size,
             tipoMime: file.type,
-            hash: null, // No global hash needed
-            hashType: 'chunk' // Signal to Receiver to verify every packet
+            hash: null,
+            hashType: 'chunk'
         }));
 
         window.Cudi.displayChatMessage(`Request sent: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB). Waiting for acceptance...`, "sent", "You");

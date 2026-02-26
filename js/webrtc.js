@@ -7,267 +7,193 @@ function logger(message, data = "") {
     }
 }
 
-window.Cudi.crearPeer = function (isOffer) {
+window.Cudi.crearPeer = function (isOffer, targetId = null) {
     const state = window.Cudi.state;
-    if (state.peer && state.peer.connectionState !== 'closed' && state.peer.connectionState !== 'failed') {
-        logger("Peer ya existente, reutilizando.");
-        if (!isOffer) return;
-    }
+    if (!targetId) return;
 
-    if (!state.peer || state.peer.connectionState === 'closed' || state.peer.connectionState === 'failed') {
-        // Reset peer alias logic
-        state.remoteAlias = null;
-        const mon = document.getElementById("connection-monitor");
-        if (mon) {
-            mon.textContent = "Initializing...";
-            mon.classList.add("active");
+    // Instance System: Check if already exists
+    if (state.activeChats.has(targetId)) {
+        const existing = state.activeChats.get(targetId);
+        if (existing.pc.connectionState !== 'closed' && existing.pc.connectionState !== 'failed') {
+            logger(`Chat instance for ${targetId} already exists and is active.`);
+            return existing;
         }
-
-        // Dynamic load of current STUN settings
-        const currentStun = window.currentSettings?.stun || "google";
-        const dynamicIceServers = window.Cudi.STUN_SERVERS_MAP[currentStun] || window.Cudi.STUN_SERVERS_MAP["google"];
-
-        state.peer = new RTCPeerConnection({ iceServers: dynamicIceServers });
-
-        state.peer.onicecandidate = (event) => {
-            if (event.candidate) {
-                // Log minimalista para saber qué opciones está encontrando el navegador
-                const parts = event.candidate.candidate.split(' ');
-                // Standard candidate format: Foundation Component Protocol Priority IP Port Typ Type ...
-                // Type is usually the 8th element (index 7)
-                const tipo = parts.length > 7 ? parts[7] : 'unknown';
-                console.log(`[CUDI-ICE] Candidato encontrado: ${tipo}`);
-
-                window.Cudi.enviarSocket({
-                    tipo: "candidato",
-                    candidato: event.candidate,
-                    sala: state.salaId,
-                });
-            }
-        };
-
-        state.peer.oniceconnectionstatechange = () => {
-            console.log(`[CUDI] Estado ICE: ${state.peer.iceConnectionState}`);
-
-            if (state.peer.iceConnectionState === 'connected') {
-                state.peer.getStats().then(stats => {
-                    stats.forEach(report => {
-                        if (report.type === 'remote-candidate') {
-                            console.log(`[CUDI] Conectado vía: ${report.candidateType}`);
-                            // Si dice 'relay', el problema es el servidor TURN.
-                            // Si dice 'srflx' o 'host', la conexión es directa y el fallo es el buffer.
-                        }
-                    });
-                });
-            }
-        };
-
-        state.peer.onconnectionstatechange = () => {
-            logger(`WebRTC Connection State: ${state.peer.connectionState}`);
-            if (state.peer.connectionState === "disconnected" || state.peer.connectionState === "failed") {
-                window.Cudi.toggleLoading(false);
-                const mon = document.getElementById("connection-monitor");
-                if (mon) {
-                    mon.textContent = "Disconnected";
-                    mon.classList.remove("active");
-                }
-                const statusEl = document.getElementById("status");
-                if (statusEl) statusEl.textContent = "Disconnected";
-
-                if (state.modo === "receive") {
-                    window.Cudi.showToast("Sender disconnected. Session ended for privacy.", "error");
-                    alert("Sender disconnected. Session ended for privacy.");
-                } else {
-                    window.Cudi.showToast("Peer disconnected.", "error");
-                }
-            }
-            if (state.peer.connectionState === "connected") {
-                window.Cudi.showToast("Device connected!", "success");
-                window.Cudi.toggleLoading(false);
-                const mon = document.getElementById("connection-monitor");
-                if (mon) {
-                    mon.textContent = "Connected (P2P)";
-                    mon.classList.add("active");
-                    // Mock Latency update
-                    setInterval(() => {
-                        if (state.peer && state.peer.connectionState === 'connected') {
-                            const latency = Math.floor(Math.random() * 20) + 10; // Mock data
-                            mon.textContent = `Connected: ${latency}ms`;
-                        }
-                    }, 2000);
-                }
-                const statusEl = document.getElementById("status");
-                if (statusEl) statusEl.textContent = "P2P Connected. Waiting for channel...";
-            }
-        };
-
-        state.peer.ondatachannel = (event) => {
-            window.Cudi.setupDataChannel(event.channel);
-        };
-
-        state.peer.ontrack = (event) => {
-            logger("Track received:", event.track.kind);
-            const remoteVideo = document.getElementById("remoteVideo");
-            if (remoteVideo && event.streams[0]) {
-                remoteVideo.srcObject = event.streams[0];
-                document.getElementById("videoContainer").style.display = "block";
-            }
-        };
     }
+
+    logger(`Creating new PeerConnection for: ${targetId}`);
+
+    const currentStun = window.currentSettings?.stun || "google";
+    const dynamicIceServers = window.Cudi.STUN_SERVERS_MAP[currentStun] || window.Cudi.STUN_SERVERS_MAP["google"];
+
+    const pc = new RTCPeerConnection({ iceServers: dynamicIceServers });
+    const chatInstance = {
+        pc: pc,
+        dc: null,
+        peerId: targetId,
+        history: [],
+        lastHeartbeat: Date.now()
+    };
+
+    state.activeChats.set(targetId, chatInstance);
+
+    pc.onicecandidate = (event) => {
+        if (event.candidate) {
+            console.log("❄️ [WebRTC] Nuevo candidato ICE generado");
+            window.Cudi.enviarSocket({
+                tipo: "candidato",
+                candidato: event.candidate,
+                sala: state.salaId,
+                targetPeerId: targetId
+            });
+        } else {
+            console.log("✅ [WebRTC] Todos los candidatos ICE enviados");
+        }
+    };
+
+    pc.onconnectionstatechange = () => {
+        console.log(`🔌 [WebRTC] Estado de conexión con ${targetId}: ${pc.connectionState}`);
+        if (pc.connectionState === "connected") {
+            window.Cudi.showToast(`Connected to ${targetId}`, "success");
+            // Trigger UI update if this is the current chat
+        }
+        if (pc.connectionState === "closed" || pc.connectionState === "failed") {
+            state.activeChats.delete(targetId);
+        }
+    };
+
+
+    pc.ondatachannel = (event) => {
+        logger(`Received DataChannel from ${targetId}`);
+        window.Cudi.setupDataChannel(event.channel, targetId);
+    };
 
     if (isOffer) {
-        if (!state.dataChannel || state.dataChannel.readyState !== 'open') {
-            state.dataChannel = state.peer.createDataChannel("canalDatos");
-            window.Cudi.setupDataChannel(state.dataChannel);
-        }
+        const dc = pc.createDataChannel("canalDatos");
+        window.Cudi.setupDataChannel(dc, targetId);
 
-        state.peer.createOffer()
-            .then((oferta) => state.peer.setLocalDescription(oferta))
+        pc.createOffer()
+            .then((oferta) => pc.setLocalDescription(oferta))
             .then(() => {
-                logger("Enviando oferta...");
+                logger("Sending offer to:", targetId);
                 window.Cudi.enviarSocket({
                     tipo: "oferta",
-                    oferta: state.peer.localDescription,
+                    oferta: pc.localDescription,
                     sala: state.salaId,
+                    targetPeerId: targetId
                 });
             })
-            .catch((error) => console.error("Error creando oferta:", error));
+            .catch((error) => console.error("Error creating offer:", error));
     }
+
+    return chatInstance;
 }
 
-window.Cudi.setupDataChannel = function (channel) {
+window.Cudi.setupDataChannel = function (channel, peerId) {
     const state = window.Cudi.state;
-    state.dataChannel = channel;
-    state.dataChannel.onopen = () => {
-        // Implement retry/check logic to avoid invalid state error
-        const checkAndSend = () => {
-            if (state.dataChannel.readyState === 'open') {
-                window.Cudi.showToast("Ready to transfer.", "success");
-                const fileInput = document.getElementById("fileInput");
-                const chatInput = document.getElementById("chatInput");
-                const sendChatBtn = document.getElementById("sendChatBtn");
+    const instance = state.activeChats.get(peerId);
+    if (!instance) return;
 
-                if (fileInput) fileInput.disabled = false;
-                if (chatInput) chatInput.disabled = false;
-                if (sendChatBtn) sendChatBtn.disabled = false;
-                window.Cudi.toggleLoading(false);
+    instance.dc = channel;
 
-                // Send Profile (Alias) immediately
-                const myAlias = state.localAlias;
-                if (myAlias) {
-                    try {
-                        state.dataChannel.send(JSON.stringify({ type: "profile", alias: myAlias }));
-                    } catch (e) {
-                        console.error("Error sending profile:", e);
-                    }
-                }
+    instance.dc.onopen = () => {
+        console.log(`🟢 [DataChannel] ¡Túnel P2P abierto con ${peerId}!`);
+        window.Cudi.showToast("Secure channel established.", "success");
 
-                // Signal ready state if needed, though profile might be enough
-                // state.dataChannel.send(JSON.stringify({ type: 'ready_to_receive' }));
+        // Sync Profile
+        window.Cudi.syncProfile(peerId);
 
-                if (state.enviarArchivoPendiente && state.archivoParaEnviar) {
-                    state.enviarArchivoPendiente = false;
-                    window.Cudi.enviarArchivo();
-                }
+        // Start Heartbeat for this channel
+        window.Cudi.startHeartbeat(peerId);
 
-                const statusEl = document.getElementById("status");
-                if (statusEl) statusEl.textContent = "Ready to Transfer";
-            } else {
-                // Retry in 50ms
-                setTimeout(checkAndSend, 50);
-            }
-        };
-        checkAndSend();
-    };
-    state.dataChannel.onclose = () => {
-        window.Cudi.showToast("Data channel closed.", "info");
-        const fileInput = document.getElementById("fileInput");
+        // Update UI if needed
         const chatInput = document.getElementById("chatInput");
         const sendChatBtn = document.getElementById("sendChatBtn");
-
-        if (fileInput) fileInput.disabled = true;
-        if (chatInput) chatInput.disabled = true;
-        if (sendChatBtn) sendChatBtn.disabled = true;
+        if (chatInput) chatInput.disabled = false;
+        if (sendChatBtn) sendChatBtn.disabled = false;
     };
-    state.dataChannel.onmessage = (event) => manejarChunk(event.data);
+
+    instance.dc.onclose = () => {
+        logger(`DataChannel CLOSED for ${peerId}`);
+        window.Cudi.stopHeartbeat(peerId);
+    };
+
+    instance.dc.onmessage = (event) => {
+        if (typeof event.data === 'string') {
+            console.log(`💬 [DataChannel] Nuevo mensaje P2P [${peerId}]:`, JSON.parse(event.data));
+        }
+        manejarChunk(event.data, peerId);
+    };
 }
+
 
 window.Cudi.manejarMensaje = function (mensaje) {
     const state = window.Cudi.state;
-    const appType = window.Cudi.appType;
     logger("Mensaje recibido", mensaje);
+
     switch (mensaje.type) {
-        case "start_negotiation":
-            if (state.modo === "send") {
-                // Check if room is locally locked (extra safety)
-                if (state.isRoomLocked) {
-                    console.warn("Room is locked (local check).");
-                    window.Cudi.showToast("Blocked connection attempt (Room Locked).", "error");
-                    return;
-                }
-                logger("Starting negotiation (Server signal)...");
-                window.Cudi.crearPeer(true);
-            } else {
-                if (!state.peer) window.Cudi.crearPeer(false);
-            }
-            break;
-
-        case "approval_request":
-            if (state.modo === "send") {
-                const peerName = mensaje.alias || "Guest";
-                // Short timeout to ensure UI is ready? usually fine.
-                setTimeout(() => {
-                    const approved = confirm(`${peerName} wants to join. Approve?`);
-                    window.Cudi.enviarSocket({
-                        type: "approval_response",
-                        peerId: mensaje.peerId,
-                        approved: approved,
-                        room: state.salaId // server might infer, but good to send
-                    });
-                    if (approved) {
-                        window.Cudi.showToast(`Approved ${peerName}.`, "success");
-                    } else {
-                        window.Cudi.showToast(`Rejected ${peerName}.`, "info");
-                    }
-                }, 100);
-            }
-            break;
-
-        case "approved":
-            window.Cudi.showToast("Host approved connection! Joining...", "success");
-            // Server should follow up with joined -> start_negotiation
-            break;
-
-        case "rejected":
-            window.Cudi.showToast("Connection rejected by host.", "error");
+        case "joined":
+            state.myId = mensaje.yourId;
+            logger("Successfully joined. My ID:", state.myId);
+            window.Cudi.showToast("Joined Cloak.", "success");
             window.Cudi.toggleLoading(false);
-            alert("Connection rejected by host.");
-            window.location.hash = "";
-            window.location.reload();
+
+            if (mensaje.peers && mensaje.peers.length > 0) {
+                mensaje.peers.forEach(p => state.peers.set(p.id, p));
+                if (state.modo === "send") {
+                    const firstPeer = mensaje.peers[0];
+                    window.Cudi.crearPeer(true, firstPeer.id);
+                }
+            }
+            break;
+
+        case "peer_joined":
+            state.peers.set(mensaje.peerId, { id: mensaje.peerId, alias: mensaje.alias });
+            window.Cudi.showToast(`${mensaje.alias} joined.`, "info");
+            if (state.modo === "send") {
+                logger("Initiating negotiation with new peer:", mensaje.peerId);
+                window.Cudi.crearPeer(true, mensaje.peerId);
+            }
+            break;
+
+        case "peer_left":
+            state.peers.delete(mensaje.peerId);
+            window.Cudi.showToast("A peer left the cloak.", "info");
             break;
 
         case "signal": {
-            const data = mensaje.data;
-            if (data.tipo === "oferta") {
-                if (!state.peer) window.Cudi.crearPeer(false);
-                state.peer.setRemoteDescription(new RTCSessionDescription(data.oferta))
-                    .then(() => state.peer.createAnswer())
-                    .then((respuesta) => state.peer.setLocalDescription(respuesta))
+            const fromId = mensaje.fromPeerId;
+
+            if (mensaje.tipo === "oferta") {
+                // Handshake Manager: Instantiate automatically on offer
+                let instance = state.activeChats.get(fromId);
+                if (!instance) {
+                    instance = window.Cudi.crearPeer(false, fromId);
+                }
+                const pc = instance.pc;
+
+                pc.setRemoteDescription(new RTCSessionDescription(mensaje.oferta))
+                    .then(() => pc.createAnswer())
+                    .then((respuesta) => pc.setLocalDescription(respuesta))
                     .then(() => {
                         window.Cudi.enviarSocket({
                             tipo: "respuesta",
-                            respuesta: state.peer.localDescription,
+                            respuesta: pc.localDescription,
                             sala: state.salaId,
+                            targetPeerId: fromId
                         });
                     })
-                    .catch((error) => console.error("Error manejando oferta:", error));
+                    .catch((error) => console.error("Error handling offer:", error));
 
-            } else if (data.tipo === "respuesta") {
-                state.peer.setRemoteDescription(new RTCSessionDescription(data.respuesta)).catch(console.error);
+            } else if (mensaje.tipo === "respuesta") {
+                const instance = state.activeChats.get(fromId);
+                if (instance) {
+                    instance.pc.setRemoteDescription(new RTCSessionDescription(mensaje.respuesta)).catch(console.error);
+                }
 
-            } else if (data.tipo === "candidato") {
-                if (state.peer) {
-                    state.peer.addIceCandidate(new RTCIceCandidate(data.candidato)).catch(console.error);
+            } else if (mensaje.tipo === "candidato") {
+                const instance = state.activeChats.get(fromId);
+                if (instance) {
+                    instance.pc.addIceCandidate(new RTCIceCandidate(mensaje.candidato)).catch(console.error);
                 }
             }
             break;
@@ -280,47 +206,26 @@ window.Cudi.manejarMensaje = function (mensaje) {
                 alert("Incorrect Password.");
                 window.location.hash = "";
                 window.location.reload();
-            } else if (mensaje.message === "Room is full") {
-                alert("Room is full (Max 2 peers).");
-                window.location.hash = "";
-                window.location.reload();
-            } else if (mensaje.message === "Password required") {
-                alert("This room requires a password.");
-                window.location.hash = "";
-                window.location.reload();
             } else {
-                window.Cudi.showToast(`Error: ${mensaje.message}`, "error");
+                window.Cudi.showToast(mensaje.message, "error");
             }
-            break;
-
-        case "room_created":
-            logger("Room created:", mensaje.room);
-            // Optional: Store token if we want to support reconnects, otherwise just proceed
-            break;
-
-        case "room_closed":
-            window.Cudi.showToast("Room closed by host.", "info");
-            alert("The host has closed the room.");
-            window.location.hash = "";
-            window.location.reload();
-            break;
-
-        case "connection_rejected":
-            // Fallback for old logic if server sends this
-            window.Cudi.toggleLoading(false);
-            window.Cudi.showToast("Connection rejected.", "error");
-            alert("Connection rejected.");
-            window.location.hash = "";
-            window.location.reload();
             break;
     }
 }
 
-function manejarChunk(data) {
+function manejarChunk(data, peerId) {
     const state = window.Cudi.state;
     if (typeof data === "string") {
         try {
             const msg = JSON.parse(data);
+            const instance = state.activeChats.get(peerId);
+            const dc = instance ? instance.dc : state.dataChannel;
+
+            if (msg.type === "presence" || msg.type === "profile") {
+                window.Cudi.handlePresenceUpdate(peerId, msg);
+                return; // Vital: Volatile presence
+            }
+
             if (msg.type === "meta") {
                 state.nombreArchivoRecibido = msg.nombre;
                 state.tamañoArchivoEsperado = msg.tamaño;
@@ -346,27 +251,30 @@ function manejarChunk(data) {
                             }
                         }
                         // Send Ready Signal
-                        state.dataChannel.send(JSON.stringify({ type: "start_transfer" }));
+                        if (dc) dc.send(JSON.stringify({ type: "start_transfer" }));
                         return true;
                     });
                 } else {
-                    state.dataChannel.send(JSON.stringify({ type: "start_transfer" }));
+                    if (dc) dc.send(JSON.stringify({ type: "start_transfer" }));
                 }
 
             } else if (msg.type === "start_transfer") {
                 if (window.Cudi.startFileStreaming) window.Cudi.startFileStreaming();
             } else if (msg.type === "chat") {
-                window.Cudi.displayChatMessage(msg.message, "received", msg.alias);
-            } else if (msg.type === "profile") {
-                // Peer sent their alias
-                const peerAlias = msg.alias;
-                if (peerAlias && peerAlias !== state.remoteAlias) {
-                    state.remoteAlias = peerAlias;
-                    window.Cudi.showToast(`${peerAlias} joined the room.`, "info");
-                    const mon = document.getElementById("connection-monitor");
-                    if (mon) mon.textContent = `Connected: ${peerAlias}`;
-                }
+                // Protocol: { type: "text", content: "...", timestamp: 123, sender: "id" }
+                const formattedMsg = {
+                    type: msg.subType || "text",
+                    content: msg.content || msg.message,
+                    timestamp: msg.timestamp || Date.now(),
+                    sender: peerId
+                };
+
+                // Persistence handled in window.Cudi.appendMessage (which checks isZeroTrace)
+                window.Cudi.appendMessage(peerId, formattedMsg);
+                window.Cudi.displayChatMessage(formattedMsg.content, "received", msg.alias || peerId);
             }
+
+
         } catch {
             // Ignore JSON parse errors for non-JSON strings
         }

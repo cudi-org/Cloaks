@@ -1,6 +1,30 @@
 
 window.Cudi.iniciarConexion = function () {
     const state = window.Cudi.state;
+
+    // Signaling Fallback (Día 5)
+    const community = window.communityManager ? window.communityManager.currentCommunity : null;
+    if (community && community.peer_cache && community.peer_cache.length > 0) {
+        console.log("[Cloak] Attempting Peer Cache reconnection before signaling...");
+        // In a real scenario, we would try to send the offer via a direct P2P socket or local discovery.
+        // For this demo, we will wait 3 seconds and then fallback if no connection established.
+        setTimeout(() => {
+            if (!state.peer || (state.peer.connectionState !== 'connected' && state.peer.connectionState !== 'connecting')) {
+                console.log("[Cloak] Peer Cache failed or timed out. Falling back to Signaling Server.");
+                this.connectToSignaling();
+            }
+        }, 3000);
+        return;
+    }
+
+    this.connectToSignaling();
+}
+
+window.Cudi.connectToSignaling = function () {
+    const state = window.Cudi.state;
+    if (state.socket && state.socket.readyState === WebSocket.OPEN) return;
+
+    console.log("📡 [Signaling] Conectando a Render...");
     state.socket = new WebSocket(window.Cudi.SIGNALING_SERVER_URL);
 
     state.socket.addEventListener("open", () => {
@@ -11,7 +35,7 @@ window.Cudi.iniciarConexion = function () {
             if (state.socket.readyState === WebSocket.OPEN) {
                 state.socket.send(JSON.stringify({ type: 'ping' }));
             }
-        }, CONFIG.HEARTBEAT_INTERVAL || 30000);
+        }, 30000);
 
         while (state.mensajePendiente.length > 0) {
             state.socket.send(state.mensajePendiente.shift());
@@ -21,8 +45,7 @@ window.Cudi.iniciarConexion = function () {
             room: state.salaId,
             appType: window.Cudi.appType,
             alias: state.localAlias,
-            password: state.roomPassword,
-            manualApproval: window.currentSettings ? window.currentSettings.manualApproval : false
+            password: state.roomPassword
         });
 
         if (state.modo === "send") {
@@ -44,7 +67,7 @@ window.Cudi.iniciarConexion = function () {
 
     state.socket.addEventListener("error", (e) => {
         console.error("WebSocket error:", e);
-        window.Cudi.showToast("Connection error. Retrying...", "error");
+        window.Cudi.showToast("Connection error.", "error");
         window.Cudi.toggleLoading(false);
     });
 
@@ -53,16 +76,16 @@ window.Cudi.iniciarConexion = function () {
             let mensaje;
             try {
                 mensaje = JSON.parse(event.data);
+                console.log(`📥 [Signaling] Mensaje recibido: ${mensaje.type} desde ${mensaje.fromPeerId || 'Servidor'}`);
             } catch { return; }
             if (window.Cudi.manejarMensaje) window.Cudi.manejarMensaje(mensaje);
         } else if (event.data instanceof Blob) {
             try {
                 const texto = await event.data.text();
                 const mensaje = JSON.parse(texto);
+                console.log(`📥 [Signaling] Mensaje recibido (Blob): ${mensaje.type} desde ${mensaje.fromPeerId || 'Servidor'}`);
                 if (window.Cudi.manejarMensaje) window.Cudi.manejarMensaje(mensaje);
-            } catch {
-                // Ignore parse errors from Blob
-            }
+            } catch { }
         }
     });
 }
@@ -79,12 +102,15 @@ window.Cudi.enviarSocket = function (obj) {
     ) {
         mensajeAEnviar = JSON.stringify({
             type: "signal",
-            data: obj,
+            ...obj,
             appType: window.Cudi.appType,
             room: state.salaId,
         });
     } else {
-        mensajeAEnviar = JSON.stringify(obj);
+        mensajeAEnviar = JSON.stringify({
+            ...obj,
+            appType: window.Cudi.appType
+        });
     }
 
     // Security Check: Payload Size Limit
@@ -101,8 +127,10 @@ window.Cudi.enviarSocket = function (obj) {
     }
 
     if (state.socket && state.socket.readyState === WebSocket.OPEN) {
+        console.log(`📤 [Signaling] Enviando: ${JSON.parse(mensajeAEnviar).type}`);
         state.socket.send(mensajeAEnviar);
     } else {
+        console.log(`⏳ [Signaling] Socket no listo. Encolando mensaje: ${JSON.parse(mensajeAEnviar).type}`);
         state.mensajePendiente.push(mensajeAEnviar);
     }
 }
