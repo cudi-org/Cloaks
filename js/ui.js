@@ -183,6 +183,8 @@ window.Cudi.ui = {
 
     switchChat(peerId) {
         if (!peerId || peerId === 'state') return;
+        if (window.Cudi.state.currentPeerId === peerId) return;
+
         console.log(`📂 [OPFS] Intentando cargar historial de: ${peerId}`);
 
         window.Cudi.state.currentPeerId = peerId;

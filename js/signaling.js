@@ -28,23 +28,9 @@ window.Cudi.connectToSignaling = function () {
     state.socket = new WebSocket(window.Cudi.SIGNALING_SERVER_URL);
 
     state.socket.addEventListener("open", () => {
-        console.log("📡 [Signaling] Protocolo iniciado. Procesando cola de espera...");
+        console.log("📡 [Signaling] Socket conectado. Protocolo iniciado.");
 
-        // 1. Flush pending messages FIRST (like find_peer from index UI)
-        while (state.mensajePendiente.length > 0) {
-            const msg = state.mensajePendiente.shift();
-            state.socket.send(msg);
-        }
-
-        // 2. Setup Heartbeat
-        if (state.heartbeatInterval) clearInterval(state.heartbeatInterval);
-        state.heartbeatInterval = setInterval(() => {
-            if (state.socket.readyState === WebSocket.OPEN) {
-                state.socket.send(JSON.stringify({ type: 'ping' }));
-            }
-        }, 30000);
-
-        // 3. Register or Join
+        // 1. Register or Join FIRST
         if (window.Cudi.appType === 'cudi-messenger') {
             window.Cudi.enviarSocket({
                 type: "register",
@@ -61,6 +47,21 @@ window.Cudi.connectToSignaling = function () {
                 password: state.roomPassword
             });
         }
+
+        // 2. Flush pending messages (like find_peer) AFTER registration
+        console.log("📡 [Signaling] Vaciando cola FIFO...");
+        while (state.mensajePendiente.length > 0) {
+            const msg = state.mensajePendiente.shift();
+            state.socket.send(msg);
+        }
+
+        // 3. Setup Heartbeat
+        if (state.heartbeatInterval) clearInterval(state.heartbeatInterval);
+        state.heartbeatInterval = setInterval(() => {
+            if (state.socket.readyState === WebSocket.OPEN) {
+                state.socket.send(JSON.stringify({ type: 'ping' }));
+            }
+        }, 30000);
 
         if (state.modo === "send") {
             if (window.Cudi.crearPeer) window.Cudi.crearPeer(true);
@@ -183,7 +184,8 @@ window.Cudi.findPeer = function (peerId) {
     console.log(`🔍 [Signaling-Messenger] Iniciando find_peer para: ${peerId}`);
     window.Cudi.enviarSocket({
         type: 'find_peer',
-        targetPeerId: peerId
+        targetPeerId: peerId,
+        appType: 'cudi-messenger'
     });
 
     const timeoutId = setTimeout(() => {
