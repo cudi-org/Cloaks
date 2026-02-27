@@ -80,6 +80,12 @@ const presenceManager = {
     },
 
     async syncProfile(peerId) {
+        // Only sync if Social Mode is active
+        if (window.identityManager && window.identityManager.profile.privacy !== 'social') {
+            console.log("👻 [Presence] Ghost Mode active: Profile sync skipped.");
+            return;
+        }
+
         const instance = window.Cudi.state.activeChats.get(peerId);
         if (instance && instance.dc && instance.dc.readyState === 'open') {
             const profile = {

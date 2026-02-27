@@ -1577,3 +1577,182 @@ body {
 .spec-content strong {
   color: var(--text-light);
 }
+
+/* NEW UI ENHANCEMENTS */
+.room-info-pill {
+  background: var(--bg-input);
+  border-radius: 20px;
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(0, 242, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.room-actions-group {
+  display: flex;
+  gap: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 8px;
+}
+
+.qr-pill {
+  background-color: white;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  margin: 20px auto;
+  width: fit-content;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.user-avatar-wrapper-mini {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.avatar-mini {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-servers);
+}
+
+.status-dot-mini {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-channels);
+}
+
+.status-dot-mini.social {
+  background-color: var(--status-green);
+}
+
+.status-dot-mini.ghost {
+  background-color: var(--status-grey);
+}
+
+.dm-item {
+  gap: 12px !important;
+}
+
+.dm-item::before {
+  display: none !important;
+}
+
+.channel-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* MOBILE OPTIMIZATION / PWA */
+@media (max-width: 768px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .server-rail {
+    width: 100vw;
+    height: 60px;
+    flex-direction: row;
+    padding: 0 12px;
+    gap: 12px;
+    order: 2;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .rail-divider {
+    width: 1px;
+    height: 32px;
+    margin: 0;
+  }
+
+  .channel-sidebar {
+    width: 100vw;
+    height: 240px;
+    flex-shrink: 0;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .chat-main {
+    flex: 1;
+    width: 100vw;
+    min-height: 0;
+  }
+
+  .member-sidebar {
+    display: none;
+  }
+
+  .header-right .search-bar {
+    display: none;
+  }
+
+  .action-cards {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .action-card {
+    width: 100%;
+    padding: 16px;
+  }
+
+  .welcome-container {
+    padding: 20px;
+  }
+
+  .section-title {
+    font-size: 24px;
+  }
+
+  .hero-logo-large {
+    width: 120px;
+  }
+
+  .video-overlay {
+    width: 90vw;
+    top: 60px;
+    right: 5vw;
+  }
+
+  .room-info-pill {
+    max-width: 90vw;
+    font-size: 14px;
+  }
+
+  .chat-input-area {
+    padding: 8px;
+  }
+
+  .input-wrapper {
+    padding: 6px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .channel-sidebar {
+    height: 200px;
+  }
+
+  .server-rail {
+    height: 50px;
+  }
+
+  .server-icon {
+    width: 36px;
+    height: 36px;
+  }
+}

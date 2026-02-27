@@ -40,18 +40,39 @@ window.Cudi.ui = {
         if (!sidebar) return;
 
         const recent = await window.Cudi.opfs.getRecentChats();
-        if (recent.length === 0) return;
 
-        sidebar.innerHTML = '<h4>RECENT CHATS</h4>';
-        recent.forEach(peerId => {
+        // Combine recent chats with currently active peers
+        const activePeers = Array.from(window.Cudi.state.activeChats.keys());
+        const allChats = Array.from(new Set([...activePeers, ...recent]));
+
+        if (allChats.length === 0) {
+            sidebar.innerHTML = '<div class="empty-state-msg">No recent conversations</div>';
+            return;
+        }
+
+        sidebar.innerHTML = '<h4>CONVERSATIONS</h4>';
+        allChats.forEach(peerId => {
+            if (!peerId || peerId === 'state') return;
+
+            const peer = window.Cudi.state.peers.get(peerId) || { alias: peerId };
             const item = document.createElement('div');
-            item.className = 'channel-item';
-            item.textContent = peerId; // Could be alias later
-            item.onclick = () => this.switchChat(peerId);
+            item.className = `channel-item dm-item ${window.Cudi.state.currentPeerId === peerId ? 'active' : ''}`;
 
-            // Status Indicator
             const online = window.Cudi.state.activeChats.has(peerId);
-            item.style.color = online ? 'var(--accent-cyan)' : 'var(--text-muted)';
+            const avatarSrc = peer.photo || './icons/logo.png';
+
+            item.innerHTML = `
+                <div class="user-avatar-wrapper-mini">
+                    <img src="${avatarSrc}" class="avatar-mini">
+                    <span class="status-dot-mini ${online ? 'social' : 'ghost'}"></span>
+                </div>
+                <span class="channel-name">${peer.alias || peerId}</span>
+            `;
+
+            item.onclick = () => {
+                this.switchChat(peerId);
+                this.renderRecentChats(); // Refresh active state
+            };
 
             sidebar.appendChild(item);
         });
@@ -126,9 +147,18 @@ window.Cudi.ui = {
         const item = document.createElement("div");
         item.className = `message-item ${type}`;
 
+        // Get avatar from state or currentpeer
+        let avatarSrc = "./icons/logo.png";
+        if (type === "sent") {
+            avatarSrc = document.getElementById('user-avatar-small')?.src || "./icons/logo.png";
+        } else {
+            const peer = window.Cudi.state.peers.get(window.Cudi.state.currentPeerId);
+            if (peer && peer.photo) avatarSrc = peer.photo;
+        }
+
         const avatar = document.createElement("img");
         avatar.className = "msg-avatar";
-        avatar.src = (type === "sent") ? (document.getElementById('user-avatar-small')?.src || "./icons/logo.png") : "./icons/logo.png";
+        avatar.src = avatarSrc;
 
         const content = document.createElement("div");
         content.className = "msg-content";

@@ -93,10 +93,10 @@ function crearSala() {
         });
     }
 
-    // Clear QR
+    // QR Logic - Hidden by default now
     if (qrContainer) {
         qrContainer.innerHTML = "";
-        qrContainer.classList.remove("hidden"); // Ensure it's visible
+        qrContainer.classList.add("hidden");
 
         const baseUrl = window.location.href.split('#')[0];
         const urlParaRecibir = `${baseUrl}#receive-${window.Cudi.state.salaId}`;
@@ -117,6 +117,19 @@ function crearSala() {
             qrContainer.textContent = "QR Library not loaded.";
         }
     }
+
+    // Toggle QR Button
+    const toggleQrBtn = document.getElementById("toggle-qr-btn");
+    if (toggleQrBtn) {
+        // Remove old listeners
+        const newQrBtn = toggleQrBtn.cloneNode(true);
+        toggleQrBtn.parentNode.replaceChild(newQrBtn, toggleQrBtn);
+        newQrBtn.addEventListener("click", () => {
+            qrContainer.classList.toggle("hidden");
+            window.Cudi.showToast(qrContainer.classList.contains("hidden") ? "QR Hidden" : "QR Visible", "info");
+        });
+    }
+
     window.Cudi.showToast("Room created. Access via Sidebar for info.", "info");
 }
 
@@ -152,7 +165,17 @@ function iniciarTransferencia() {
     zona.classList.remove("hidden");
 
     const qrCont = document.getElementById("qrContainer");
-    if (qrCont && window.Cudi.state.modo === "send") qrCont.classList.remove("hidden");
+    if (qrCont) qrCont.classList.add("hidden"); // Ensure hidden on start
+
+    // Setup QR toggle in all cases
+    const toggleQrBtn = document.getElementById("toggle-qr-btn");
+    if (toggleQrBtn) {
+        const newQrBtn = toggleQrBtn.cloneNode(true);
+        toggleQrBtn.parentNode.replaceChild(newQrBtn, toggleQrBtn);
+        newQrBtn.addEventListener("click", () => {
+            qrCont.classList.toggle("hidden");
+        });
+    }
 
     if (salaStatus) salaStatus.textContent = window.Cudi.state.salaId + (window.Cudi.state.roomPassword ? " (🔒)" : "");
 
