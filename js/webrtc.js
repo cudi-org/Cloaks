@@ -220,25 +220,26 @@ window.Cudi.manejarMensaje = function (mensaje) {
 
         case "signal":
         case "offer":
-            window.Cudi.handleOffer(mensaje);
-            break;
-
-        case "answer": {
-            const fromId = mensaje.fromPeerId;
-            const instance = state.activeChats.get(fromId);
-            const sdp = mensaje.respuesta || mensaje.answer;
-            if (instance) {
-                instance.pc.setRemoteDescription(new RTCSessionDescription(sdp)).catch(console.error);
-            }
-            break;
-        }
-
+        case "answer":
         case "candidate": {
             const fromId = mensaje.fromPeerId;
-            const instance = state.activeChats.get(fromId);
-            const cand = mensaje.candidato || mensaje.candidate;
-            if (instance) {
-                instance.pc.addIceCandidate(new RTCIceCandidate(cand)).catch(console.error);
+            // Unpack signalType if it was masked for room transit
+            const type = mensaje.signalType || mensaje.type;
+
+            if (type === "offer") {
+                window.Cudi.handleOffer(mensaje);
+            } else if (type === "answer") {
+                const instance = state.activeChats.get(fromId);
+                const sdp = mensaje.respuesta || mensaje.answer;
+                if (instance) {
+                    instance.pc.setRemoteDescription(new RTCSessionDescription(sdp)).catch(console.error);
+                }
+            } else if (type === "candidate") {
+                const instance = state.activeChats.get(fromId);
+                const cand = mensaje.candidato || mensaje.candidate;
+                if (instance) {
+                    instance.pc.addIceCandidate(new RTCIceCandidate(cand)).catch(console.error);
+                }
             }
             break;
         }
@@ -350,6 +351,8 @@ function manejarChunk(data, peerId) {
 
 window.Cudi.localStream = null;
 
+
+
 window.Cudi.renegotiate = async function () {
     const state = window.Cudi.state;
     if (!state.peer) return;
@@ -357,9 +360,9 @@ window.Cudi.renegotiate = async function () {
         const offer = await state.peer.createOffer();
         await state.peer.setLocalDescription(offer);
         window.Cudi.enviarSocket({
-            tipo: 'oferta',
-            oferta: state.peer.localDescription,
-            sala: state.salaId
+            type: 'offer',
+            offer: state.peer.localDescription,
+            targetPeerId: state.currentPeerId
         });
     } catch (e) {
         console.error('Renegotiation failed', e);

@@ -28,14 +28,27 @@ window.Cudi.connectToSignaling = function () {
     state.socket = new WebSocket(window.Cudi.SIGNALING_SERVER_URL);
 
     state.socket.onopen = () => {
-        console.log("🔵 [STEP 1] Socket Abierto. Registrando mi ID...");
+        console.log("🔵 [STEP 1] Socket Abierto. Registrando...");
 
-        // 1. PRIMERO: Registro obligatorio
-        window.Cudi.enviarSocket({
-            type: "register",
-            peerId: state.myId,
-            alias: state.localAlias
-        });
+        // Determine Flow: Room (Cloaks) or P2P (Messenger)
+        if (state.salaId) {
+            window.Cudi.appType = "cloaks";
+            console.log(`🏠 [Signaling] Uniéndome a sala: ${state.salaId}`);
+            window.Cudi.enviarSocket({
+                type: "join",
+                room: state.salaId,
+                password: state.roomPassword,
+                alias: state.localAlias
+            });
+        } else {
+            window.Cudi.appType = "cudi-messenger";
+            console.log(`🆔 [Signaling] Registrando ID permanente: ${state.myId}`);
+            window.Cudi.enviarSocket({
+                type: "register",
+                peerId: state.myId,
+                alias: state.localAlias
+            });
+        }
 
         // 2. SEGUNDO: Vaciamos la cola FIFO
         console.log(`📤 [Signaling] Vaciando cola. Mensajes pendientes: ${state.mensajePendiente.length}`);
@@ -48,12 +61,12 @@ window.Cudi.connectToSignaling = function () {
         if (state.heartbeatInterval) clearInterval(state.heartbeatInterval);
         state.heartbeatInterval = setInterval(() => {
             if (state.socket.readyState === WebSocket.OPEN) {
-                state.socket.send(JSON.stringify({ type: 'ping', appType: 'cudi-messenger' }));
+                state.socket.send(JSON.stringify({ type: 'ping', appType: window.Cudi.appType }));
             }
         }, 30000);
 
-        if (state.modo === "send" && window.Cudi.crearPeer) {
-            window.Cudi.crearPeer(true);
+        if (state.modo === "send" && window.Cudi.iniciarHandshakeWebRTC) {
+            // We'll wait for 'joined' or handle specifically
         }
     };
 
@@ -98,7 +111,8 @@ window.Cudi.connectToSignaling = function () {
             if (window.Cudi.iniciarHandshakeWebRTC) {
                 window.Cudi.iniciarHandshakeWebRTC(targetId);
             }
-        } else if (mensaje.type === "offer" || mensaje.type === "answer" || mensaje.type === "candidate" || mensaje.type === "signal") {
+        } else {
+            // Pasamos todos los mensajes de sala/señalización a webrtc logic
             window.Cudi.manejarMensaje(mensaje);
         }
     };
@@ -106,16 +120,29 @@ window.Cudi.connectToSignaling = function () {
 
 window.Cudi.enviarSocket = function (obj) {
     const state = window.Cudi.state;
-    // Forzamos appType
+    // Forzamos appType dinámico
     const payload = {
         ...obj,
-        appType: 'cudi-messenger'
+        appType: window.Cudi.appType || 'cudi-messenger'
     };
+
+    // Compatibilidad con el servidor para salas (Cloaks)
+    // El servidor en handleCloakLogic solo acepta 'join' y 'signal'.
+    // Si enviamos offer/answer/candidate directamente, los ignora.
+    if ((payload.appType === 'cloaks' || payload.appType === 'cudi-sync') &&
+        ['offer', 'answer', 'candidate', 'signal'].includes(payload.type)) {
+        // Si ya es type 'signal' pero no tiene signalType, es una señal genérica.
+        // Si es offer/answer/candidate, lo envolvemos.
+        if (payload.type !== 'signal') {
+            payload.signalType = payload.type; // Guardamos el tipo real
+            payload.type = 'signal';           // Enmascaramos
+        }
+    }
 
     const mensajeAEnviar = JSON.stringify(payload);
 
     if (state.socket && state.socket.readyState === WebSocket.OPEN) {
-        console.log(`📤 [STEP 2] Enviando tipo: ${payload.type}`);
+        console.log(`📤 [STEP 2] Enviando tipo: ${payload.type} (Real: ${payload.signalType || payload.type})`);
         state.socket.send(mensajeAEnviar);
     } else {
         const socketState = state.socket ? state.socket.readyState : 'NULL';
@@ -123,6 +150,7 @@ window.Cudi.enviarSocket = function (obj) {
         state.mensajePendiente.push(mensajeAEnviar);
     }
 }
+
 
 window.Cudi.findPeer = function (peerId) {
     const state = window.Cudi.state;
