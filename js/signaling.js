@@ -28,7 +28,7 @@ window.Cudi.connectToSignaling = function () {
     state.socket = new WebSocket(window.Cudi.SIGNALING_SERVER_URL);
 
     state.socket.addEventListener("open", () => {
-        console.log("📡 [Signaling] Socket conectado. Protocolo iniciado.");
+        console.log("🔵 [STEP 1] Socket Abierto. Enviando 'register'...");
 
         // 1. Register or Join FIRST
         if (window.Cudi.appType === 'cudi-messenger') {
@@ -42,14 +42,14 @@ window.Cudi.connectToSignaling = function () {
                 type: "join",
                 room: state.salaId,
                 appType: window.Cudi.appType,
-                peerId: state.myId, // Permanent Identity ID
+                peerId: state.myId,
                 alias: state.localAlias,
                 password: state.roomPassword
             });
         }
 
-        // 2. Flush pending messages (like find_peer) AFTER registration
-        console.log("📡 [Signaling] Vaciando cola FIFO...");
+        // 2. Flush pending messages AFTER registration
+        console.log("📤 [STEP 2] Vaciando cola FIFO...");
         while (state.mensajePendiente.length > 0) {
             const msg = state.mensajePendiente.shift();
             state.socket.send(msg);
@@ -93,11 +93,15 @@ window.Cudi.connectToSignaling = function () {
             mensaje = JSON.parse(data);
         } catch { return; }
 
-        console.log(`📥 [Signaling] Mensaje recibido: ${mensaje.type} desde ${mensaje.fromPeerId || 'Servidor'}`);
+        console.log(`📥 [STEP 3] Mensaje recibido del servidor:`, mensaje);
+
+        if (mensaje.type === "registered") {
+            console.log("✅ [STEP 4] Servidor confirmó mi registro.");
+        }
 
         if (mensaje.type === "peer_found") {
             const targetId = mensaje.peerId;
-            console.log(`🎯 [Signaling] Peer found: ${targetId}. Initing WebRTC...`);
+            console.log(`🎯 [STEP 5] ¡PEER ENCONTRADO! ID: ${targetId}. Iniciando WebRTC...`);
 
             // Clear search timeout
             if (state.activeFinds.has(targetId)) {
@@ -127,11 +131,13 @@ window.Cudi.enviarSocket = function (obj) {
 
     if (window.Cudi.appType === 'cudi-messenger') {
         // Messenger Protocol
-        mensajeAEnviar = JSON.stringify({
+        const payload = {
             appType: 'cudi-messenger',
             ...obj,
-            type: type // Normalize
-        });
+            type: type
+        };
+        console.log(`📤 [STEP 2] Intentando enviar tipo: ${payload.type} | ReadyState: ${state.socket?.readyState}`);
+        mensajeAEnviar = JSON.stringify(payload);
     } else {
         // Cloaks/Sync Protocol
         if (type === "join") {

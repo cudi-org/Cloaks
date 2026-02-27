@@ -44,19 +44,19 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
 
     pc.onicecandidate = (event) => {
         if (event.candidate) {
-            console.log("❄️ [WebRTC] Nuevo candidato ICE generado");
+            console.log("❄️ [STEP 7] Candidato ICE generado. Enviando a través del servidor...");
             window.Cudi.enviarSocket({
                 type: "candidate",
                 candidato: event.candidate,
                 targetPeerId: targetId
             });
         } else {
-            console.log("✅ [WebRTC] Todos los candidatos ICE enviados");
+            console.log("✅ [STEP 8] Fin de recopilación de candidatos ICE.");
         }
     };
 
     pc.onconnectionstatechange = () => {
-        console.log(`🔌 [WebRTC] Estado de conexión con ${targetId}: ${pc.connectionState}`);
+        console.log(`🔌 [STEP 9] Estado de conexión WebRTC: ${pc.connectionState}`);
         if (pc.connectionState === "connected") {
             window.Cudi.showToast(`Connected to ${targetId}`, "success");
             // Trigger UI update if this is the current chat
@@ -76,6 +76,7 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
         const dc = pc.createDataChannel("canalDatos");
         window.Cudi.setupDataChannel(dc, targetId);
 
+        console.log("🏗️ [STEP 6] Creando RTC Offer...");
         pc.createOffer()
             .then((oferta) => pc.setLocalDescription(oferta))
             .then(() => {

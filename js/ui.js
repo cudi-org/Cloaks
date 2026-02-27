@@ -185,8 +185,7 @@ window.Cudi.ui = {
         if (!peerId || peerId === 'state') return;
         if (window.Cudi.state.currentPeerId === peerId) return;
 
-        console.log(`📂 [OPFS] Intentando cargar historial de: ${peerId}`);
-
+        console.log(`📁 [UI] Solicitando historial y conexión para: ${peerId}`);
         window.Cudi.state.currentPeerId = peerId;
 
         // Toggle View: Show Chat, Hide Welcome
@@ -227,6 +226,7 @@ window.Cudi.ui = {
             if (input) {
                 input.placeholder = "Esperando a que el peer se conecte...";
                 input.disabled = true;
+                console.error(`❌ [UI Error] No se pudo conectar inmediatamente con ${peerId}. Revisa logs de Signaling.`);
             }
         } else {
             if (input) {
