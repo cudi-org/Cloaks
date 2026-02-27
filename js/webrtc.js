@@ -245,8 +245,6 @@ window.Cudi.manejarMensaje = function (mensaje) {
         }
 
         case "error":
-
-        case "error":
             logger("Server Error:", mensaje.message);
             window.Cudi.toggleLoading(false);
             if (mensaje.message === "Wrong password") {
@@ -429,7 +427,7 @@ window.Cudi.stopVideo = function () {
                 const senders = state.peer.getSenders();
                 const sender = senders.find(s => s.track === track);
                 if (sender) {
-                    try { state.peer.removeTrack(sender); } catch (e) {
+                    try { state.peer.removeTrack(sender); } catch (_e) {
                         // Ignore removeTrack errors
                     }
                 }
@@ -482,7 +480,7 @@ window.Cudi.startScreenShare = async function () {
                 if (sender) sender.replaceTrack(camTrack);
                 document.getElementById('localVideo').srcObject = window.Cudi.localStream;
             } else {
-                if (sender) try { state.peer.removeTrack(sender); } catch (e) {
+                if (sender) try { state.peer.removeTrack(sender); } catch (_e) {
                     // Ignore track removal error
                 }
                 window.Cudi.stopVideo();

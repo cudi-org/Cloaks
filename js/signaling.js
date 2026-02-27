@@ -85,7 +85,7 @@ window.Cudi.connectToSignaling = function () {
         try {
             const data = typeof event.data === 'string' ? event.data : await event.data.text();
             mensaje = JSON.parse(data);
-        } catch (e) { return; }
+        } catch (_e) { return; }
 
         console.log(`📥 [STEP 3] Mensaje del servidor:`, mensaje);
 
