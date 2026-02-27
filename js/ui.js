@@ -107,7 +107,8 @@ window.Cudi.ui = {
 
     async renderRecentChats() {
         const sidebar = document.getElementById('channel-list');
-        if (!sidebar) return;
+        const state = window.Cudi?.state;
+        if (!sidebar || !state?.peers) return;
 
         // Index all files from OPFS
         const recent = await window.Cudi.opfs.getRecentChats();

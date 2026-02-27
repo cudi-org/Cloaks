@@ -18,6 +18,7 @@ window.Cudi.state = {
     remoteAlias: null,
     activeChats: new Map(), // Track WebRTC connections per peerId
     activeFinds: new Map(), // Track pending find_peer requests (peerId -> timeoutId)
+    peers: new Map(), // Track metadata and presence of peers
     isZeroTrace: localStorage.getItem('cloaks_zero_trace') === 'true',
 };
 

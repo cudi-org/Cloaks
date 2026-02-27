@@ -148,14 +148,15 @@
               <form id="form-send" onsubmit="return false;" class="entry-controls hidden">
                 <input type="text" id="aliasInput" placeholder="Your Alias" class="discord-input">
                 <input type="text" id="customRoomInput" placeholder="Room Code (Opt)" class="discord-input">
-                <input type="password" id="roomPasswordInput" placeholder="Room Password (Opt)" class="discord-input">
+                <input type="password" id="roomPasswordInput" placeholder="Room Password (Opt)" class="discord-input"
+                  autocomplete="new-password">
                 <button id="btnCreate" class="discord-btn-primary">Start Room</button>
               </form>
 
               <form id="form-receive" onsubmit="return false;" class="entry-controls hidden">
                 <input type="text" id="codigoSala" placeholder="Enter Room Code" class="discord-input">
                 <input type="password" id="joinPasswordInput" placeholder="Room Password (if locked)"
-                  class="discord-input">
+                  class="discord-input" autocomplete="current-password">
                 <button id="unirseBtn" class="discord-btn-primary">Join Room</button>
               </form>
             </div> <!-- End onboarding-menu -->
@@ -424,7 +425,8 @@
                     <h4>Spotify Integration</h4>
                     <p>Show your friends what you are listening to.</p>
                   </div>
-                  <input type="password" id="spotify-token" placeholder="Refresh Token" class="discord-input-subtle">
+                  <input type="password" id="spotify-token" placeholder="Refresh Token" class="discord-input-subtle"
+                    autocomplete="current-password">
                 </form>
                 <div class="card-row">
                   <div class="row-info">
