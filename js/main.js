@@ -304,7 +304,7 @@ if (sendChatBtn && chatInput) {
             // Persist as pending
             payload.status = "pending";
             window.Cudi.appendMessage(state.currentPeerId, payload);
-            window.Cudi.showToast("Message queued (offline).", "info");
+            // window.Cudi.showToast("Message queued (offline).", "info");
         }
 
         window.Cudi.displayChatMessage(message, "sent", myAlias);

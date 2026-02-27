@@ -7,6 +7,35 @@ function logger(message, data = "") {
     }
 }
 
+window.Cudi.iniciarHandshakeWebRTC = function (targetId) {
+    return window.Cudi.crearPeer(true, targetId);
+};
+
+window.Cudi.handleOffer = function (mensaje) {
+    const state = window.Cudi.state;
+    const fromId = mensaje.fromPeerId;
+
+    // Handshake Manager: Instantiate automatically on offer
+    let instance = state.activeChats.get(fromId);
+    if (!instance) {
+        instance = window.Cudi.crearPeer(false, fromId);
+    }
+    const pc = instance.pc;
+    const sdp = mensaje.oferta || mensaje.offer;
+
+    pc.setRemoteDescription(new RTCSessionDescription(sdp))
+        .then(() => pc.createAnswer())
+        .then((respuesta) => pc.setLocalDescription(respuesta))
+        .then(() => {
+            window.Cudi.enviarSocket({
+                type: "answer",
+                answer: pc.localDescription,
+                targetPeerId: fromId
+            });
+        })
+        .catch((error) => console.error("Error handling offer:", error));
+};
+
 window.Cudi.crearPeer = function (isOffer, targetId = null) {
     const state = window.Cudi.state;
     if (!state) return;
@@ -121,8 +150,9 @@ window.Cudi.setupDataChannel = function (channel, peerId) {
         window.Cudi.startHeartbeat(peerId);
 
         // Update UI
-        if (window.Cudi.ui && window.Cudi.ui.renderRecentChats) {
-            window.Cudi.ui.renderRecentChats();
+        if (window.Cudi.ui) {
+            if (window.Cudi.ui.setChatStatus) window.Cudi.ui.setChatStatus(peerId, 'online');
+            if (window.Cudi.ui.renderRecentChats) window.Cudi.ui.renderRecentChats();
         }
 
         const chatInput = document.getElementById("chatInput");
@@ -190,48 +220,30 @@ window.Cudi.manejarMensaje = function (mensaje) {
 
         case "signal":
         case "offer":
-        case "answer":
-        case "candidate": {
+            window.Cudi.handleOffer(mensaje);
+            break;
+
+        case "answer": {
             const fromId = mensaje.fromPeerId;
-            const type = mensaje.type;
-
-            if (type === "oferta" || type === "offer") {
-                // Handshake Manager: Instantiate automatically on offer
-                let instance = state.activeChats.get(fromId);
-                if (!instance) {
-                    instance = window.Cudi.crearPeer(false, fromId);
-                }
-                const pc = instance.pc;
-                const sdp = mensaje.oferta || mensaje.offer;
-
-                pc.setRemoteDescription(new RTCSessionDescription(sdp))
-                    .then(() => pc.createAnswer())
-                    .then((respuesta) => pc.setLocalDescription(respuesta))
-                    .then(() => {
-                        window.Cudi.enviarSocket({
-                            type: "answer",
-                            answer: pc.localDescription,
-                            targetPeerId: fromId
-                        });
-                    })
-                    .catch((error) => console.error("Error handling offer:", error));
-
-            } else if (type === "respuesta" || type === "answer") {
-                const instance = state.activeChats.get(fromId);
-                const sdp = mensaje.respuesta || mensaje.answer;
-                if (instance) {
-                    instance.pc.setRemoteDescription(new RTCSessionDescription(sdp)).catch(console.error);
-                }
-
-            } else if (type === "candidato" || type === "candidate") {
-                const instance = state.activeChats.get(fromId);
-                const cand = mensaje.candidato || mensaje.candidate;
-                if (instance) {
-                    instance.pc.addIceCandidate(new RTCIceCandidate(cand)).catch(console.error);
-                }
+            const instance = state.activeChats.get(fromId);
+            const sdp = mensaje.respuesta || mensaje.answer;
+            if (instance) {
+                instance.pc.setRemoteDescription(new RTCSessionDescription(sdp)).catch(console.error);
             }
             break;
         }
+
+        case "candidate": {
+            const fromId = mensaje.fromPeerId;
+            const instance = state.activeChats.get(fromId);
+            const cand = mensaje.candidato || mensaje.candidate;
+            if (instance) {
+                instance.pc.addIceCandidate(new RTCIceCandidate(cand)).catch(console.error);
+            }
+            break;
+        }
+
+        case "error":
 
         case "error":
             logger("Server Error:", mensaje.message);

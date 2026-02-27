@@ -95,10 +95,10 @@ window.Cudi.connectToSignaling = function () {
             }
 
             // 3. DISPARAR WEBRTC (La oferta)
-            if (window.Cudi.crearPeer) {
-                window.Cudi.crearPeer(true, targetId);
+            if (window.Cudi.iniciarHandshakeWebRTC) {
+                window.Cudi.iniciarHandshakeWebRTC(targetId);
             }
-        } else if (mensaje.type === "signal") {
+        } else if (mensaje.type === "offer" || mensaje.type === "answer" || mensaje.type === "candidate" || mensaje.type === "signal") {
             window.Cudi.manejarMensaje(mensaje);
         }
     };

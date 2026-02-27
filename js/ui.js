@@ -152,7 +152,8 @@ window.Cudi.ui = {
             const item = document.createElement('div');
             item.className = `channel-item dm-item ${state.currentPeerId === peerId ? 'active' : ''}`;
 
-            const online = state.activeChats.has(peerId);
+            const instance = state.activeChats.get(peerId);
+            const online = instance && instance.dc && instance.dc.readyState === 'open';
             const searching = state.activeFinds.has(peerId);
             const statusClass = online ? 'social' : (searching ? 'searching' : 'ghost');
 
@@ -209,7 +210,7 @@ window.Cudi.ui = {
         if (status === 'searching') {
             window.Cudi.findPeer(peerId);
             if (input && window.Cudi.state.currentPeerId === peerId) {
-                input.placeholder = "Buscando al contacto...";
+                input.placeholder = "Buscando contacto... (Estableciendo túnel)";
                 input.disabled = true;
             }
             this.renderRecentChats();
@@ -283,7 +284,8 @@ window.Cudi.ui = {
             const item = document.createElement('div');
             item.className = 'member-item';
 
-            const online = state.activeChats.has(id);
+            const instance = state.activeChats.get(id);
+            const online = instance && instance.dc && instance.dc.readyState === 'open';
 
             item.innerHTML = `
                 <div class="user-avatar-wrapper">
