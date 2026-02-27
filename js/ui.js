@@ -186,11 +186,47 @@ window.Cudi.ui = {
         }
     },
 
-    switchChat(peerId) {
+    async renderMessagesFromDisk(peerId) {
+        const history = await window.Cudi.loadHistory(peerId);
+        const display = document.getElementById('messagesDisplay');
+        if (!display) return;
+        display.innerHTML = '';
+
+        if (history.length === 0) {
+            display.innerHTML = '<div class="empty-state-msg">No messages here yet. Get the conversation started!</div>';
+        }
+
+        history.forEach(msg => {
+            const type = (msg.sender && msg.sender === peerId) ? 'received' : 'sent';
+            window.Cudi.displayChatMessage(msg.content, type, msg.alias);
+        });
+    },
+
+    setChatStatus(peerId, status) {
+        console.log(`📡 [UI] Setting status for ${peerId} to ${status}`);
+        const input = document.getElementById('chatInput');
+
+        if (status === 'searching') {
+            window.Cudi.findPeer(peerId);
+            if (input && window.Cudi.state.currentPeerId === peerId) {
+                input.placeholder = "Buscando al contacto...";
+                input.disabled = true;
+            }
+            this.renderRecentChats();
+        } else if (status === 'online') {
+            if (input && window.Cudi.state.currentPeerId === peerId) {
+                input.placeholder = `Message #${peerId}`;
+                input.disabled = false;
+            }
+            this.renderRecentChats();
+        }
+    },
+
+    async switchChat(peerId) {
         if (!peerId || peerId === 'state') return;
         if (window.Cudi.state.currentPeerId === peerId) return;
 
-        console.log(`📁 [UI] Solicitando historial y conexión para: ${peerId}`);
+        console.log(`📁 [UI] Iniciando flujo para: ${peerId}`);
         window.Cudi.state.currentPeerId = peerId;
 
         // Toggle View: Show Chat, Hide Welcome
@@ -202,42 +238,15 @@ window.Cudi.ui = {
         document.getElementById('current-channel-name').textContent = peerId;
         this.updateChatHeader(peerId);
 
-        // Load history from disco
-        window.Cudi.loadHistory(peerId).then(history => {
-            const display = document.getElementById('messagesDisplay');
-            if (!display) return;
-            display.innerHTML = '';
+        // 1. Cargar historial (Instantáneo)
+        await this.renderMessagesFromDisk(peerId);
 
-            if (history.length === 0) {
-                display.innerHTML = '<div class="empty-state-msg">No messages here yet. Get the conversation started!</div>';
-            }
-
-            history.forEach(msg => {
-                // Sender logic: Any message NOT from the peerId is assumed to be FROM ME
-                // This handles same-browser testing where both tabs might share the same ID.
-                const type = (msg.sender && msg.sender === peerId) ? 'received' : 'sent';
-                window.Cudi.displayChatMessage(msg.content, type, msg.alias);
-            });
-        });
-
-        // Connection logic: If offline, try to find peer
+        // 2. Connection logic: If offline, try to find peer
         const online = window.Cudi.state.activeChats.has(peerId);
-        const input = document.getElementById('chatInput');
         if (!online) {
-            // Iniciar reencuentro via helper con timeout
-            window.Cudi.findPeer(peerId);
-
-            // Disable input until connected
-            if (input) {
-                input.placeholder = "Esperando a que el peer se conecte...";
-                input.disabled = true;
-                console.error(`❌ [UI Error] No se pudo conectar inmediatamente con ${peerId}. Revisa logs de Signaling.`);
-            }
+            this.setChatStatus(peerId, 'searching');
         } else {
-            if (input) {
-                input.placeholder = `Message #${peerId}`;
-                input.disabled = false;
-            }
+            this.setChatStatus(peerId, 'online');
         }
     },
 

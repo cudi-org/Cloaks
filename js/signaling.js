@@ -80,14 +80,24 @@ window.Cudi.connectToSignaling = function () {
             console.log("✅ [STEP 4] Servidor confirmó mi registro.");
         } else if (mensaje.type === "peer_found") {
             const targetId = mensaje.peerId;
-            console.log(`🎯 [STEP 5] ¡PEER ENCONTRADO! ID: ${targetId}. Iniciando WebRTC...`);
+            console.log(`🎯 [STEP 5] ¡PEER ENCONTRADO! ID: ${targetId}`);
 
+            // 1. Notificar a la UI
+            window.Cudi.showToast(`¡${targetId} está online! Conectando...`, "success");
+            if (window.Cudi.ui && window.Cudi.ui.setChatStatus) {
+                window.Cudi.ui.setChatStatus(targetId, 'online');
+            }
+
+            // 2. Limpiar búsqueda
             if (state.activeFinds.has(targetId)) {
                 clearTimeout(state.activeFinds.get(targetId));
                 state.activeFinds.delete(targetId);
             }
-            if (window.Cudi.crearPeer) window.Cudi.crearPeer(true, targetId);
-            if (window.Cudi.ui) window.Cudi.ui.renderRecentChats();
+
+            // 3. DISPARAR WEBRTC (La oferta)
+            if (window.Cudi.crearPeer) {
+                window.Cudi.crearPeer(true, targetId);
+            }
         } else if (mensaje.type === "signal") {
             window.Cudi.manejarMensaje(mensaje);
         }
@@ -131,7 +141,7 @@ window.Cudi.findPeer = function (peerId) {
             window.Cudi.showToast("El contacto sigue offline, te avisaremos cuando aparezca.", "info");
             if (window.Cudi.ui) window.Cudi.ui.renderRecentChats();
         }
-    }, 30000);
+    }, 10000);
 
     state.activeFinds.set(peerId, timeoutId);
     if (window.Cudi.ui) window.Cudi.ui.renderRecentChats();
