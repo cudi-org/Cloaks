@@ -145,19 +145,19 @@
               </div>
 
               <!-- Room Inputs (Hidden initially) -->
-              <div id="send-controls" class="entry-controls hidden">
+              <form id="form-send" onsubmit="return false;" class="entry-controls hidden">
                 <input type="text" id="aliasInput" placeholder="Your Alias" class="discord-input">
                 <input type="text" id="customRoomInput" placeholder="Room Code (Opt)" class="discord-input">
                 <input type="password" id="roomPasswordInput" placeholder="Room Password (Opt)" class="discord-input">
                 <button id="btnCreate" class="discord-btn-primary">Start Room</button>
-              </div>
+              </form>
 
-              <div id="recepcion" class="entry-controls hidden">
+              <form id="form-receive" onsubmit="return false;" class="entry-controls hidden">
                 <input type="text" id="codigoSala" placeholder="Enter Room Code" class="discord-input">
                 <input type="password" id="joinPasswordInput" placeholder="Room Password (if locked)"
                   class="discord-input">
                 <button id="unirseBtn" class="discord-btn-primary">Join Room</button>
-              </div>
+              </form>
             </div> <!-- End onboarding-menu -->
           </div> <!-- End welcome-content-wrap -->
         </div> <!-- End welcome-screen -->
@@ -419,13 +419,13 @@
             <div class="settings-group-modern">
               <label>PRESENCE SETTINGS</label>
               <div class="setting-card">
-                <div class="card-row">
+                <form onsubmit="return false;" class="card-row">
                   <div class="row-info">
                     <h4>Spotify Integration</h4>
                     <p>Show your friends what you are listening to.</p>
                   </div>
                   <input type="password" id="spotify-token" placeholder="Refresh Token" class="discord-input-subtle">
-                </div>
+                </form>
                 <div class="card-row">
                   <div class="row-info">
                     <h4>Game Activity</h4>

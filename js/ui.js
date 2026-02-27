@@ -3,6 +3,39 @@ window.Cudi.ui = {
         this.bindZeroTrace();
         this.renderRecentChats();
         this.bindMobileSidebars();
+        this.bindHomeButton();
+    },
+
+    bindHomeButton() {
+        const btnHome = document.getElementById('btn-home');
+        btnHome?.addEventListener('click', () => {
+            // UI state
+            window.Cudi.state.currentPeerId = null;
+
+            // Toggle visibility
+            document.getElementById('welcome-screen')?.classList.remove('hidden');
+            document.getElementById('messagesDisplay')?.classList.add('hidden');
+            document.getElementById('zonaTransferencia')?.classList.add('hidden');
+
+            // Header reset
+            document.getElementById('current-channel-name').textContent = 'welcome';
+            document.getElementById('header-peer-info')?.classList.add('hidden');
+
+            // Server icon active state
+            document.querySelectorAll('.server-icon').forEach(i => i.classList.remove('active'));
+            btnHome.classList.add('active');
+
+            if (window.innerWidth <= 1024) {
+                this.closeMobileSidebars();
+            }
+        });
+    },
+
+    closeMobileSidebars() {
+        const shell = document.querySelector('.app-shell');
+        const overlay = document.getElementById('sidebar-overlay');
+        shell.classList.remove('menu-open', 'members-open');
+        overlay.classList.add('hidden');
     },
 
     bindMobileSidebars() {
@@ -11,10 +44,7 @@ window.Cudi.ui = {
         const membersBtn = document.getElementById('mobile-members-btn');
         const overlay = document.getElementById('sidebar-overlay');
 
-        const closeAll = () => {
-            shell.classList.remove('menu-open', 'members-open');
-            overlay.classList.add('hidden');
-        };
+        const closeAll = () => this.closeMobileSidebars();
 
         menuBtn?.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -143,7 +173,12 @@ window.Cudi.ui = {
 
         window.Cudi.state.currentPeerId = peerId;
 
-        // Update UI state immediately
+        // Toggle View: Show Chat, Hide Welcome
+        document.getElementById('welcome-screen')?.classList.add('hidden');
+        document.getElementById('messagesDisplay')?.classList.remove('hidden');
+        document.getElementById('zonaTransferencia')?.classList.remove('hidden');
+
+        // Update header
         document.getElementById('current-channel-name').textContent = peerId;
         this.updateChatHeader(peerId);
 

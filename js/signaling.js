@@ -28,8 +28,15 @@ window.Cudi.connectToSignaling = function () {
     state.socket = new WebSocket(window.Cudi.SIGNALING_SERVER_URL);
 
     state.socket.addEventListener("open", () => {
-        console.log("Connected to signaling server.");
+        console.log("📡 [Signaling] Protocolo iniciado. Procesando cola de espera...");
 
+        // 1. Flush pending messages FIRST (like find_peer from index UI)
+        while (state.mensajePendiente.length > 0) {
+            const msg = state.mensajePendiente.shift();
+            state.socket.send(msg);
+        }
+
+        // 2. Setup Heartbeat
         if (state.heartbeatInterval) clearInterval(state.heartbeatInterval);
         state.heartbeatInterval = setInterval(() => {
             if (state.socket.readyState === WebSocket.OPEN) {
@@ -37,9 +44,7 @@ window.Cudi.connectToSignaling = function () {
             }
         }, 30000);
 
-        while (state.mensajePendiente.length > 0) {
-            state.socket.send(state.mensajePendiente.shift());
-        }
+        // 3. Join the room
         window.Cudi.enviarSocket({
             type: "join",
             room: state.salaId,
