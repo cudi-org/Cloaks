@@ -364,9 +364,9 @@ window.addEventListener("load", () => {
             }
             window.Cudi.state.modo = "receive";
             iniciarTransferencia();
-            const recepcion = document.getElementById("recepcion");
-            if (recepcion) {
-                recepcion.classList.remove("hidden");
+            const formReceive = document.getElementById("form-receive");
+            if (formReceive) {
+                formReceive.classList.remove("hidden");
                 const codeInp = document.getElementById("codigoSala");
                 if (codeInp) codeInp.value = window.Cudi.state.salaId;
             }
@@ -385,15 +385,19 @@ if (btnJoin) btnJoin.addEventListener("click", unirseSala);
 
 if (tabSend) {
     tabSend.addEventListener("click", () => {
-        document.getElementById("send-controls").classList.remove("hidden");
-        document.getElementById("recepcion").classList.add("hidden");
+        const formSend = document.getElementById("form-send");
+        const formReceive = document.getElementById("form-receive");
+        if (formSend) formSend.classList.remove("hidden");
+        if (formReceive) formReceive.classList.add("hidden");
     });
 }
 
 if (tabReceive) {
     tabReceive.addEventListener("click", () => {
-        document.getElementById("recepcion").classList.remove("hidden");
-        document.getElementById("send-controls").classList.add("hidden");
+        const formSend = document.getElementById("form-send");
+        const formReceive = document.getElementById("form-receive");
+        if (formReceive) formReceive.classList.remove("hidden");
+        if (formSend) formSend.classList.add("hidden");
     });
 }
 
