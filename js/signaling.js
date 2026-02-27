@@ -22,163 +22,94 @@ window.Cudi.iniciarConexion = function () {
 
 window.Cudi.connectToSignaling = function () {
     const state = window.Cudi.state;
-    if (state.socket && state.socket.readyState === WebSocket.OPEN) return;
+    if (state.socket && (state.socket.readyState === WebSocket.OPEN || state.socket.readyState === WebSocket.CONNECTING)) return;
 
-    console.log("📡 [Signaling] Conectando a Render...");
+    console.log("📡 [Signaling] Iniciando conexión con Render...");
     state.socket = new WebSocket(window.Cudi.SIGNALING_SERVER_URL);
 
-    state.socket.addEventListener("open", () => {
-        console.log("🔵 [STEP 1] Socket Abierto. Enviando 'register'...");
+    state.socket.onopen = () => {
+        console.log("🔵 [STEP 1] Socket Abierto. Registrando mi ID...");
 
-        // 1. Register or Join FIRST
-        if (window.Cudi.appType === 'cudi-messenger') {
-            window.Cudi.enviarSocket({
-                type: "register",
-                peerId: state.myId,
-                alias: state.localAlias
-            });
-        } else {
-            window.Cudi.enviarSocket({
-                type: "join",
-                room: state.salaId,
-                appType: window.Cudi.appType,
-                peerId: state.myId,
-                alias: state.localAlias,
-                password: state.roomPassword
-            });
-        }
+        // 1. PRIMERO: Registro obligatorio
+        window.Cudi.enviarSocket({
+            type: "register",
+            peerId: state.myId,
+            alias: state.localAlias
+        });
 
-        // 2. Flush pending messages AFTER registration
-        console.log("📤 [STEP 2] Vaciando cola FIFO...");
+        // 2. SEGUNDO: Vaciamos la cola FIFO
+        console.log(`📤 [Signaling] Vaciando cola. Mensajes pendientes: ${state.mensajePendiente.length}`);
         while (state.mensajePendiente.length > 0) {
             const msg = state.mensajePendiente.shift();
             state.socket.send(msg);
         }
 
-        // 3. Setup Heartbeat
+        // Heartbeat logic
         if (state.heartbeatInterval) clearInterval(state.heartbeatInterval);
         state.heartbeatInterval = setInterval(() => {
             if (state.socket.readyState === WebSocket.OPEN) {
-                state.socket.send(JSON.stringify({ type: 'ping' }));
+                state.socket.send(JSON.stringify({ type: 'ping', appType: 'cudi-messenger' }));
             }
         }, 30000);
 
-        if (state.modo === "send") {
-            if (window.Cudi.crearPeer) window.Cudi.crearPeer(true);
+        if (state.modo === "send" && window.Cudi.crearPeer) {
+            window.Cudi.crearPeer(true);
         }
-    });
+    };
 
-    state.socket.addEventListener("close", () => {
-        window.Cudi.showToast("Disconnected from server.", "error");
+    state.socket.onclose = () => {
+        console.log("📡 [Signaling] Socket cerrado.");
         if (state.heartbeatInterval) clearInterval(state.heartbeatInterval);
-        const fileInput = document.getElementById("fileInput");
-        const chatInput = document.getElementById("chatInput");
-        const sendChatBtn = document.getElementById("sendChatBtn");
+        window.Cudi.showToast("Disconnected from signaling.", "error");
+    };
 
-        if (fileInput) fileInput.disabled = true;
-        if (chatInput) chatInput.disabled = true;
-        if (sendChatBtn) sendChatBtn.disabled = true;
-    });
-
-    state.socket.addEventListener("error", (e) => {
+    state.socket.onerror = (e) => {
         console.error("WebSocket error:", e);
-        window.Cudi.showToast("Connection error.", "error");
-        window.Cudi.toggleLoading(false);
-    });
+    };
 
-    state.socket.addEventListener("message", async (event) => {
+    state.socket.onmessage = async (event) => {
         let mensaje;
         try {
-            const data = typeof event.data === "string" ? event.data : await event.data.text();
+            const data = typeof event.data === 'string' ? event.data : await event.data.text();
             mensaje = JSON.parse(data);
-        } catch { return; }
+        } catch (e) { return; }
 
-        console.log(`📥 [STEP 3] Mensaje recibido del servidor:`, mensaje);
+        console.log(`📥 [STEP 3] Mensaje del servidor:`, mensaje);
 
         if (mensaje.type === "registered") {
             console.log("✅ [STEP 4] Servidor confirmó mi registro.");
-        }
-
-        if (mensaje.type === "peer_found") {
+        } else if (mensaje.type === "peer_found") {
             const targetId = mensaje.peerId;
             console.log(`🎯 [STEP 5] ¡PEER ENCONTRADO! ID: ${targetId}. Iniciando WebRTC...`);
 
-            // Clear search timeout
             if (state.activeFinds.has(targetId)) {
                 clearTimeout(state.activeFinds.get(targetId));
                 state.activeFinds.delete(targetId);
             }
-
-            // Iniciar WebRTC como Offer
             if (window.Cudi.crearPeer) window.Cudi.crearPeer(true, targetId);
-
-            // Refresh UI
             if (window.Cudi.ui) window.Cudi.ui.renderRecentChats();
-
-        } else if (mensaje.type === "peer_not_found") {
-            console.warn(`⚠️ [Signaling] Peer ${mensaje.target} not found on server.`);
         } else if (mensaje.type === "signal") {
             window.Cudi.manejarMensaje(mensaje);
         }
-    });
+    };
 }
 
 window.Cudi.enviarSocket = function (obj) {
     const state = window.Cudi.state;
-    let mensajeAEnviar;
+    // Forzamos appType
+    const payload = {
+        ...obj,
+        appType: 'cudi-messenger'
+    };
 
-    const type = obj.type || obj.tipo;
-
-    if (window.Cudi.appType === 'cudi-messenger') {
-        // Messenger Protocol
-        const payload = {
-            appType: 'cudi-messenger',
-            ...obj,
-            type: type
-        };
-        console.log(`📤 [STEP 2] Intentando enviar tipo: ${payload.type} | ReadyState: ${state.socket?.readyState}`);
-        mensajeAEnviar = JSON.stringify(payload);
-    } else {
-        // Cloaks/Sync Protocol
-        if (type === "join") {
-            mensajeAEnviar = JSON.stringify(obj);
-        } else if (
-            type === "oferta" ||
-            type === "respuesta" ||
-            type === "candidato"
-        ) {
-            mensajeAEnviar = JSON.stringify({
-                type: "signal",
-                ...obj,
-                appType: window.Cudi.appType,
-                room: state.salaId,
-            });
-        } else {
-            mensajeAEnviar = JSON.stringify({
-                ...obj,
-                appType: window.Cudi.appType
-            });
-        }
-    }
-
-    // Security Check: Payload Size Limit
-    // 16KB limit to protect signaling server connection
-    const MAX_PAYLOAD_BYTES = 16384;
-    // Using simple length check as rough estimator, or Blob for accuracy if needed. 
-    // TextEncoder is cleaner for bytes.
-    const payloadSize = new TextEncoder().encode(mensajeAEnviar).length;
-
-    if (payloadSize > MAX_PAYLOAD_BYTES) {
-        console.error("Payload too large for signaling server:", payloadSize, "bytes. Dropping message.");
-        // Optional: window.Cudi.showToast("Error: Signal message too large.", "error");
-        return;
-    }
+    const mensajeAEnviar = JSON.stringify(payload);
 
     if (state.socket && state.socket.readyState === WebSocket.OPEN) {
-        console.log(`📤 [Signaling] Enviando: ${JSON.parse(mensajeAEnviar).type}`);
+        console.log(`📤 [STEP 2] Enviando tipo: ${payload.type}`);
         state.socket.send(mensajeAEnviar);
     } else {
-        console.log(`⏳ [Signaling] Socket no listo. Encolando mensaje (FIFO): ${JSON.parse(mensajeAEnviar).type}`);
+        const socketState = state.socket ? state.socket.readyState : 'NULL';
+        console.log(`⏳ [STEP 2.1] Encolando ${payload.type} (Estado: ${socketState})`);
         state.mensajePendiente.push(mensajeAEnviar);
     }
 }

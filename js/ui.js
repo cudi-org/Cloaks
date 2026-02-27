@@ -10,6 +10,11 @@ window.Cudi.ui = {
         this.renderRecentChats();
         this.bindMobileSidebars();
         this.bindHomeButton();
+
+        // Start Signaling early for messenger features
+        if (window.Cudi.connectToSignaling) {
+            window.Cudi.connectToSignaling();
+        }
     },
 
     bindHomeButton() {
