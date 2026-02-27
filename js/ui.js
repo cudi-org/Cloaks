@@ -1,5 +1,11 @@
 window.Cudi.ui = {
     init() {
+        // Essential state protection
+        if (window.Cudi && window.Cudi.state) {
+            window.Cudi.state.peers = window.Cudi.state.peers || new Map();
+            window.Cudi.state.activeChats = window.Cudi.state.activeChats || new Map();
+            window.Cudi.state.activeFinds = window.Cudi.state.activeFinds || new Map();
+        }
         this.bindZeroTrace();
         this.renderRecentChats();
         this.bindMobileSidebars();
@@ -108,13 +114,18 @@ window.Cudi.ui = {
     async renderRecentChats() {
         const sidebar = document.getElementById('channel-list');
         const state = window.Cudi?.state;
-        if (!sidebar || !state?.peers) return;
+        if (!sidebar || !state) return;
+
+        // Ensure sub-objects exist
+        state.peers = state.peers || new Map();
+        state.activeChats = state.activeChats || new Map();
+        state.activeFinds = state.activeFinds || new Map();
 
         // Index all files from OPFS
         const recent = await window.Cudi.opfs.getRecentChats();
 
         // Combine with active
-        const activePeers = Array.from(window.Cudi.state.activeChats.keys());
+        const activePeers = Array.from(state.activeChats ? state.activeChats.keys() : []);
         const allChats = Array.from(new Set([...activePeers, ...recent]));
 
         if (allChats.length === 0) {
@@ -128,16 +139,16 @@ window.Cudi.ui = {
 
             // Try to get cached metadata
             const metadata = await window.Cudi.opfs.getContactMetadata(peerId);
-            const peerState = window.Cudi.state.peers.get(peerId);
+            const peerState = state.peers ? state.peers.get(peerId) : null;
 
             const alias = (peerState && peerState.alias) || (metadata && metadata.alias) || peerId;
             const photo = (peerState && peerState.photo) || (metadata && metadata.photo) || './icons/logo.png';
 
             const item = document.createElement('div');
-            item.className = `channel-item dm-item ${window.Cudi.state.currentPeerId === peerId ? 'active' : ''}`;
+            item.className = `channel-item dm-item ${state.currentPeerId === peerId ? 'active' : ''}`;
 
-            const online = window.Cudi.state.activeChats.has(peerId);
-            const searching = window.Cudi.state.activeFinds.has(peerId);
+            const online = state.activeChats.has(peerId);
+            const searching = state.activeFinds.has(peerId);
             const statusClass = online ? 'social' : (searching ? 'searching' : 'ghost');
 
             item.innerHTML = `
@@ -224,7 +235,9 @@ window.Cudi.ui = {
     },
 
     updateChatHeader(peerId) {
-        const peer = window.Cudi.state.peers.get(peerId);
+        const state = window.Cudi?.state;
+        if (!state?.peers) return;
+        const peer = state.peers.get(peerId);
         const headerInfo = document.getElementById('header-peer-info');
         if (!peer || !headerInfo) return;
 
@@ -243,17 +256,18 @@ window.Cudi.ui = {
     updateMemberSidebar() {
         const list = document.getElementById('member-list');
         const count = document.getElementById('peer-count');
-        if (!list) return;
+        const state = window.Cudi?.state;
+        if (!list || !state?.peers) return;
 
         list.innerHTML = '';
-        const peers = window.Cudi.state.peers;
+        const peers = state.peers;
         count.textContent = peers.size;
 
         peers.forEach((peer, id) => {
             const item = document.createElement('div');
             item.className = 'member-item';
 
-            const online = window.Cudi.state.activeChats.has(id);
+            const online = state.activeChats.has(id);
 
             item.innerHTML = `
                 <div class="user-avatar-wrapper">
@@ -278,7 +292,8 @@ window.Cudi.ui = {
         if (type === "sent") {
             avatarSrc = document.getElementById('user-avatar-small')?.src || "./icons/logo.png";
         } else {
-            const peer = window.Cudi.state.peers.get(window.Cudi.state.currentPeerId);
+            const state = window.Cudi?.state;
+            const peer = state?.peers ? state.peers.get(window.Cudi.state.currentPeerId) : null;
             if (peer && peer.photo) avatarSrc = peer.photo;
         }
 

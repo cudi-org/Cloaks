@@ -9,6 +9,12 @@ function logger(message, data = "") {
 
 window.Cudi.crearPeer = function (isOffer, targetId = null) {
     const state = window.Cudi.state;
+    if (!state) return;
+
+    // Safety initialization
+    state.activeChats = state.activeChats || new Map();
+    state.peers = state.peers || new Map();
+
     if (!targetId) return;
 
     // Instance System: Check if already exists

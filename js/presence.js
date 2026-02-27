@@ -61,7 +61,9 @@ const presenceManager = {
     },
 
     async sendHeartbeat(peerId) {
-        const instance = window.Cudi.state.activeChats.get(peerId);
+        const state = window.Cudi.state;
+        if (!state.activeChats) return;
+        const instance = state.activeChats.get(peerId);
         if (instance && instance.dc && instance.dc.readyState === 'open') {
             const status = {
                 type: 'presence',
@@ -109,6 +111,7 @@ const presenceManager = {
     handlePresenceUpdate(peerId, data) {
         console.log(`Presence update from ${peerId}:`, data);
         const state = window.Cudi.state;
+        if (!state.peers) state.peers = new Map();
         const peer = state.peers.get(peerId) || { id: peerId };
 
         if (data.type === 'profile') {
