@@ -1642,10 +1642,30 @@ body {
 
 .dm-item {
   gap: 12px !important;
+  position: relative;
 }
 
 .dm-item::before {
   display: none !important;
+}
+
+.dm-item .delete-chat-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: var(--transition);
+}
+
+.dm-item:hover .delete-chat-btn {
+  opacity: 1;
+}
+
+.dm-item .delete-chat-btn:hover {
+  color: #ed4245;
 }
 
 .channel-name {
@@ -1655,104 +1675,129 @@ body {
   white-space: nowrap;
 }
 
-/* MOBILE OPTIMIZATION / PWA */
-@media (max-width: 768px) {
-  .app-shell {
-    flex-direction: column;
+/* MOBILE OPTIMIZATION / DISCORD-LIKE SIDEBARS */
+.mobile-only-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  transition: var(--transition);
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+}
+
+@media (max-width: 1024px) {
+  .mobile-only-btn {
+    display: block;
+  }
+
+  /* Sidebars slide-out behavior */
+  .server-rail,
+  .channel-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    z-index: 1001;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .server-rail {
-    width: 100vw;
-    height: 60px;
-    flex-direction: row;
-    padding: 0 12px;
-    gap: 12px;
-    order: 2;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-  }
-
-  .rail-divider {
-    width: 1px;
-    height: 32px;
-    margin: 0;
+    left: 0;
+    transform: translateX(-100%);
+    width: 72px;
   }
 
   .channel-sidebar {
-    width: 100vw;
-    height: 240px;
-    flex-shrink: 0;
-    border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  }
-
-  .chat-main {
-    flex: 1;
-    width: 100vw;
-    min-height: 0;
+    left: 72px;
+    transform: translateX(-100%);
+    width: 240px;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
   }
 
   .member-sidebar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 1001;
+    transform: translateX(100%);
+    background: var(--bg-members);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Open states */
+  .app-shell.menu-open .server-rail {
+    transform: translateX(0);
+  }
+
+  .app-shell.menu-open .channel-sidebar {
+    transform: translateX(0);
+  }
+
+  .app-shell.members-open .member-sidebar {
+    transform: translateX(0);
+  }
+
+  /* Main Chat Layout */
+  .chat-main {
+    width: 100vw;
+    flex: none;
+  }
+
+  .header-right .search-bar,
+  .header-right #help-btn {
     display: none;
-  }
-
-  .header-right .search-bar {
-    display: none;
-  }
-
-  .action-cards {
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-  }
-
-  .action-card {
-    width: 100%;
-    padding: 16px;
   }
 
   .welcome-container {
     padding: 20px;
   }
 
-  .section-title {
-    font-size: 24px;
+  .action-cards {
+    flex-direction: column;
+    width: 100%;
+    gap: 12px;
   }
 
-  .hero-logo-large {
-    width: 120px;
+  .action-card {
+    width: 100%;
   }
 
   .video-overlay {
     width: 90vw;
-    top: 60px;
     right: 5vw;
+    top: 60px;
   }
 
   .room-info-pill {
-    max-width: 90vw;
-    font-size: 14px;
-  }
-
-  .chat-input-area {
-    padding: 8px;
-  }
-
-  .input-wrapper {
+    max-width: 85vw;
+    font-size: 13px;
     padding: 6px 12px;
+  }
+
+  .chat-header h3 {
+    font-size: 14px;
   }
 }
 
 @media (max-width: 480px) {
   .channel-sidebar {
-    height: 200px;
+    width: 200px;
   }
 
-  .server-rail {
-    height: 50px;
-  }
-
-  .server-icon {
-    width: 36px;
-    height: 36px;
+  .member-sidebar {
+    width: 100vw;
   }
 }

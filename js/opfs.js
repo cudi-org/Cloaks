@@ -94,16 +94,74 @@ window.Cudi = window.Cudi || {};
 
             const chats = [];
             try {
+                const entries = [];
                 for await (const entry of root.values()) {
-                    if (entry.kind === 'file' && entry.name.endsWith('.json')) {
-                        const peerId = entry.name.replace('chat_', '').replace('.json', '');
-                        if (!chats.includes(peerId)) chats.push(peerId);
+                    if (entry.kind === 'file' && entry.name.startsWith('chat_') && entry.name.endsWith('.json')) {
+                        const file = await entry.getFile();
+                        entries.push({
+                            name: entry.name,
+                            lastModified: file.lastModified,
+                            peerId: entry.name.replace('chat_', '').replace('.json', '')
+                        });
                     }
                 }
+                // Sort by lastModified DESC
+                entries.sort((a, b) => b.lastModified - a.lastModified);
+                return entries.map(e => e.peerId);
             } catch (e) {
                 console.error("Error listing recent chats", e);
             }
             return chats;
+        },
+
+        async saveContactMetadata(peerId, metadata) {
+            const root = await this.getDirectory();
+            if (!root) return;
+            try {
+                const fileHandle = await root.getFileHandle('contacts_cache.json', { create: true });
+                const file = await fileHandle.getFile();
+                const text = await file.text();
+                const cache = text ? JSON.parse(text) : {};
+
+                cache[peerId] = {
+                    ...cache[peerId],
+                    ...metadata,
+                    updatedAt: Date.now()
+                };
+
+                const writable = await fileHandle.createWritable();
+                await writable.write(JSON.stringify(cache));
+                await writable.close();
+            } catch (e) {
+                console.error("Error saving metadata", e);
+            }
+        },
+
+        async getContactMetadata(peerId) {
+            const root = await this.getDirectory();
+            if (!root) return null;
+            try {
+                const fileHandle = await root.getFileHandle('contacts_cache.json');
+                const file = await fileHandle.getFile();
+                const text = await file.text();
+                const cache = JSON.parse(text);
+                return cache[peerId] || null;
+            } catch {
+                return null;
+            }
+        },
+
+        async deleteChat(peerId) {
+            const root = await this.getDirectory();
+            if (!root) return;
+            try {
+                await root.removeEntry(`chat_${peerId}.json`);
+                console.log(`🗑️ [OPFS] Borrado chat con ${peerId}`);
+                return true;
+            } catch (e) {
+                console.error("Error deleting chat", e);
+                return false;
+            }
         },
 
         async clearAllHistory() {
@@ -140,5 +198,36 @@ window.Cudi = window.Cudi || {};
             instance.history = [];
         });
         console.log("RAM history cleared.");
+    };
+
+    window.Cudi.syncPendingMessages = async (peerId) => {
+        const history = await window.Cudi.opfs.loadHistory(peerId);
+        const pending = history.filter(m => m.status === 'pending');
+        if (pending.length === 0) return;
+
+        const instance = window.Cudi.state.activeChats.get(peerId);
+        if (instance && instance.dc && instance.dc.readyState === 'open') {
+            const myAlias = window.Cudi.state.localAlias || 'You';
+            console.log(`📡 [OPFS] Sincronizando ${pending.length} mensajes pendientes con ${peerId}`);
+
+            for (const msg of pending) {
+                delete msg.status; // Remove pending flag
+                instance.dc.send(JSON.stringify({
+                    type: "chat",
+                    subType: "text",
+                    ...msg,
+                    alias: myAlias
+                }));
+            }
+
+            // Save history back without pending flags
+            const root = await window.Cudi.opfs.getDirectory();
+            const fileHandle = await root.getFileHandle(`chat_${peerId}.json`, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(JSON.stringify(history));
+            await writable.close();
+
+            window.Cudi.showToast(`Synced ${pending.length} offline messages.`, "success");
+        }
     };
 })();

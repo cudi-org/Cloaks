@@ -2,6 +2,46 @@ window.Cudi.ui = {
     init() {
         this.bindZeroTrace();
         this.renderRecentChats();
+        this.bindMobileSidebars();
+    },
+
+    bindMobileSidebars() {
+        const shell = document.querySelector('.app-shell');
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const membersBtn = document.getElementById('mobile-members-btn');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        const closeAll = () => {
+            shell.classList.remove('menu-open', 'members-open');
+            overlay.classList.add('hidden');
+        };
+
+        menuBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            shell.classList.toggle('menu-open');
+            shell.classList.remove('members-open');
+            if (shell.classList.contains('menu-open')) overlay.classList.remove('hidden');
+            else overlay.classList.add('hidden');
+        });
+
+        membersBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            shell.classList.toggle('members-open');
+            shell.classList.remove('menu-open');
+            if (shell.classList.contains('members-open')) overlay.classList.remove('hidden');
+            else overlay.classList.add('hidden');
+        });
+
+        overlay?.addEventListener('click', closeAll);
+
+        // Close sidebar on item clicks (mobile)
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 1024) {
+                if (e.target.closest('.channel-item') || e.target.closest('.server-icon')) {
+                    closeAll();
+                }
+            }
+        });
     },
 
     bindZeroTrace() {
@@ -39,9 +79,10 @@ window.Cudi.ui = {
         const sidebar = document.getElementById('channel-list');
         if (!sidebar) return;
 
+        // Index all files from OPFS
         const recent = await window.Cudi.opfs.getRecentChats();
 
-        // Combine recent chats with currently active peers
+        // Combine with active
         const activePeers = Array.from(window.Cudi.state.activeChats.keys());
         const allChats = Array.from(new Set([...activePeers, ...recent]));
 
@@ -51,31 +92,49 @@ window.Cudi.ui = {
         }
 
         sidebar.innerHTML = '<h4>CONVERSATIONS</h4>';
-        allChats.forEach(peerId => {
-            if (!peerId || peerId === 'state') return;
+        for (const peerId of allChats) {
+            if (!peerId || peerId === 'state') continue;
 
-            const peer = window.Cudi.state.peers.get(peerId) || { alias: peerId };
+            // Try to get cached metadata
+            const metadata = await window.Cudi.opfs.getContactMetadata(peerId);
+            const peerState = window.Cudi.state.peers.get(peerId);
+
+            const alias = (peerState && peerState.alias) || (metadata && metadata.alias) || peerId;
+            const photo = (peerState && peerState.photo) || (metadata && metadata.photo) || './icons/logo.png';
+
             const item = document.createElement('div');
             item.className = `channel-item dm-item ${window.Cudi.state.currentPeerId === peerId ? 'active' : ''}`;
 
             const online = window.Cudi.state.activeChats.has(peerId);
-            const avatarSrc = peer.photo || './icons/logo.png';
 
             item.innerHTML = `
                 <div class="user-avatar-wrapper-mini">
-                    <img src="${avatarSrc}" class="avatar-mini">
+                    <img src="${photo}" class="avatar-mini">
                     <span class="status-dot-mini ${online ? 'social' : 'ghost'}"></span>
                 </div>
-                <span class="channel-name">${peer.alias || peerId}</span>
+                <span class="channel-name">${alias}</span>
+                <button class="delete-chat-btn" title="Delete conversation">×</button>
             `;
 
-            item.onclick = () => {
+            item.querySelector('.channel-name').onclick = () => {
                 this.switchChat(peerId);
-                this.renderRecentChats(); // Refresh active state
+                this.renderRecentChats();
+            };
+
+            item.querySelector('.delete-chat-btn').onclick = async (e) => {
+                e.stopPropagation();
+                if (confirm(`Delete conversation with ${alias}?`)) {
+                    await window.Cudi.opfs.deleteChat(peerId);
+                    this.renderRecentChats();
+                    if (window.Cudi.state.currentPeerId === peerId) {
+                        document.getElementById('messagesDisplay').innerHTML = '';
+                        document.getElementById('current-channel-name').textContent = 'Cloaks';
+                    }
+                }
             };
 
             sidebar.appendChild(item);
-        });
+        }
     },
 
     switchChat(peerId) {
@@ -83,18 +142,49 @@ window.Cudi.ui = {
         console.log(`📂 [OPFS] Intentando cargar historial de: ${peerId}`);
 
         window.Cudi.state.currentPeerId = peerId;
+
+        // Update UI state immediately
         document.getElementById('current-channel-name').textContent = peerId;
         this.updateChatHeader(peerId);
-        // Load history
+
+        // Load history from disco
         window.Cudi.loadHistory(peerId).then(history => {
             const display = document.getElementById('messagesDisplay');
             if (!display) return;
             display.innerHTML = '';
-            // history is guaranteed array by opfs.js fix
+
+            if (history.length === 0) {
+                display.innerHTML = '<div class="empty-state-msg">No messages here yet. Get the conversation started!</div>';
+            }
+
             history.forEach(msg => {
-                window.Cudi.displayChatMessage(msg.content, msg.sender === window.Cudi.state.myId ? 'sent' : 'received', msg.sender);
+                const type = msg.sender === window.Cudi.state.myId ? 'sent' : 'received';
+                window.Cudi.displayChatMessage(msg.content, type, msg.alias);
             });
         });
+
+        // Connection logic: If offline, try to find peer
+        const online = window.Cudi.state.activeChats.has(peerId);
+        const input = document.getElementById('chatInput');
+        if (!online) {
+            window.Cudi.showToast(`Buscando conexión con ${peerId}...`, "info");
+            // Iniciar reencuentro
+            window.Cudi.enviarSocket({
+                type: 'find_peer',
+                target: peerId
+            });
+
+            // Disable input until connected
+            if (input) {
+                input.placeholder = "Esperando a que el peer se conecte...";
+                input.disabled = true;
+            }
+        } else {
+            if (input) {
+                input.placeholder = `Message #${peerId}`;
+                input.disabled = false;
+            }
+        }
     },
 
     updateChatHeader(peerId) {

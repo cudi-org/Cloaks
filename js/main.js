@@ -285,25 +285,30 @@ if (sendChatBtn && chatInput) {
         }
 
         const instance = state.activeChats.get(state.currentPeerId);
-        if (message && instance && instance.dc && instance.dc.readyState === "open") {
-            const myAlias = state.localAlias;
-            const payload = {
-                type: "chat",
-                subType: "text",
-                content: message,
-                alias: myAlias,
-                timestamp: Date.now(),
-                sender: state.myId
-            };
+        const myAlias = state.localAlias;
+        const payload = {
+            type: "chat",
+            subType: "text",
+            content: message,
+            alias: myAlias,
+            timestamp: Date.now(),
+            sender: state.myId
+        };
 
+        if (instance && instance.dc && instance.dc.readyState === "open") {
             instance.dc.send(JSON.stringify(payload));
-
-            // Persist
+            // Persist normally
             window.Cudi.appendMessage(state.currentPeerId, payload);
-
-            window.Cudi.displayChatMessage(message, "sent", myAlias);
-            chatInput.value = "";
+        } else {
+            console.log("⏳ [Offline] Peer offline. Encolando mensaje en disco.");
+            // Persist as pending
+            payload.status = "pending";
+            window.Cudi.appendMessage(state.currentPeerId, payload);
+            window.Cudi.showToast("Message queued (offline).", "info");
         }
+
+        window.Cudi.displayChatMessage(message, "sent", myAlias);
+        chatInput.value = "";
     });
 
     chatInput.addEventListener("keydown", (e) => {

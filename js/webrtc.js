@@ -99,16 +99,28 @@ window.Cudi.setupDataChannel = function (channel, peerId) {
         console.log(`🟢 [DataChannel] ¡Túnel P2P abierto con ${peerId}!`);
         window.Cudi.showToast("Secure channel established.", "success");
 
+        // Sync pending messages from disk
+        if (window.Cudi.syncPendingMessages) {
+            window.Cudi.syncPendingMessages(peerId);
+        }
+
         // Sync Profile
         window.Cudi.syncProfile(peerId);
 
         // Start Heartbeat for this channel
         window.Cudi.startHeartbeat(peerId);
 
-        // Update UI if needed
+        // Update UI
+        if (window.Cudi.ui && window.Cudi.ui.renderRecentChats) {
+            window.Cudi.ui.renderRecentChats();
+        }
+
         const chatInput = document.getElementById("chatInput");
         const sendChatBtn = document.getElementById("sendChatBtn");
-        if (chatInput) chatInput.disabled = false;
+        if (chatInput && window.Cudi.state.currentPeerId === peerId) {
+            chatInput.disabled = false;
+            chatInput.placeholder = `Message #${peerId}`;
+        }
         if (sendChatBtn) sendChatBtn.disabled = false;
     };
 
@@ -223,6 +235,14 @@ function manejarChunk(data, peerId) {
 
             if (msg.type === "presence" || msg.type === "profile") {
                 window.Cudi.handlePresenceUpdate(peerId, msg);
+
+                // Cache metadata for sidebar persistence
+                if (msg.type === "profile" && window.Cudi.opfs.saveContactMetadata) {
+                    window.Cudi.opfs.saveContactMetadata(peerId, {
+                        alias: msg.name,
+                        photo: msg.photo
+                    });
+                }
                 return; // Vital: Volatile presence
             }
 

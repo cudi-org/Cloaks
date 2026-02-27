@@ -9,6 +9,7 @@ const STORE_NAME = 'identity';
 const identityManager = {
     db: null,
     profile: {
+        myId: '', // Unique persistent ID
         name: '',
         pronouns: '',
         photo: '',
@@ -46,11 +47,20 @@ const identityManager = {
             request.onsuccess = () => {
                 if (request.result) {
                     this.profile = { ...this.profile, ...request.result };
-                    console.log("👤 [Identity] Perfil local cargado:", this.profile.name);
-                    this.updateUI();
+                    console.log("👤 [Identity] Perfil local cargado:", this.profile.name, "| ID:", this.profile.myId);
                 } else {
                     console.log("⚠️ [Identity] No hay perfil local. Usando identidad temporal.");
+                    // Generate permanent ID
+                    this.profile.myId = Math.random().toString(16).slice(2, 10);
+                    this.saveProfile();
                 }
+
+                // Update global state
+                if (window.Cudi && window.Cudi.state) {
+                    window.Cudi.state.myId = this.profile.myId;
+                }
+
+                this.updateUI();
                 resolve();
             };
 

@@ -44,6 +44,7 @@ window.Cudi.connectToSignaling = function () {
             type: "join",
             room: state.salaId,
             appType: window.Cudi.appType,
+            peerId: state.myId, // Permanent Identity ID
             alias: state.localAlias,
             password: state.roomPassword
         });
@@ -72,22 +73,25 @@ window.Cudi.connectToSignaling = function () {
     });
 
     state.socket.addEventListener("message", async (event) => {
-        if (typeof event.data === "string") {
-            let mensaje;
-            try {
-                mensaje = JSON.parse(event.data);
-                console.log(`📥 [Signaling] Mensaje recibido: ${mensaje.type} desde ${mensaje.fromPeerId || 'Servidor'}`);
-            } catch { return; }
-            if (window.Cudi.manejarMensaje) window.Cudi.manejarMensaje(mensaje);
-        } else if (event.data instanceof Blob) {
-            try {
-                const texto = await event.data.text();
-                const mensaje = JSON.parse(texto);
-                console.log(`📥 [Signaling] Mensaje recibido (Blob): ${mensaje.type} desde ${mensaje.fromPeerId || 'Servidor'}`);
-                if (window.Cudi.manejarMensaje) window.Cudi.manejarMensaje(mensaje);
-            } catch (err) {
-                console.error("Error parsing signaling Blob:", err);
+        let mensaje;
+        try {
+            const data = typeof event.data === "string" ? event.data : await event.data.text();
+            mensaje = JSON.parse(data);
+        } catch { return; }
+
+        console.log(`📥 [Signaling] Mensaje recibido: ${mensaje.type} desde ${mensaje.fromPeerId || 'Servidor'}`);
+
+        if (mensaje.type === "signal") {
+            // Handle reunion/handshake update
+            const fromId = mensaje.fromPeerId;
+            if (fromId) {
+                if (window.Cudi.crearPeer) {
+                    // createPeer should handle existing connection logic (Day 3/5 Requirement)
+                    window.Cudi.crearPeer(false, fromId, mensaje);
+                }
             }
+        } else if (window.Cudi.manejarMensaje) {
+            window.Cudi.manejarMensaje(mensaje);
         }
     });
 }
