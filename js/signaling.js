@@ -44,15 +44,23 @@ window.Cudi.connectToSignaling = function () {
             }
         }, 30000);
 
-        // 3. Join the room
-        window.Cudi.enviarSocket({
-            type: "join",
-            room: state.salaId,
-            appType: window.Cudi.appType,
-            peerId: state.myId, // Permanent Identity ID
-            alias: state.localAlias,
-            password: state.roomPassword
-        });
+        // 3. Register or Join
+        if (window.Cudi.appType === 'cudi-messenger') {
+            window.Cudi.enviarSocket({
+                type: "register",
+                peerId: state.myId,
+                alias: state.localAlias
+            });
+        } else {
+            window.Cudi.enviarSocket({
+                type: "join",
+                room: state.salaId,
+                appType: window.Cudi.appType,
+                peerId: state.myId, // Permanent Identity ID
+                alias: state.localAlias,
+                password: state.roomPassword
+            });
+        }
 
         if (state.modo === "send") {
             if (window.Cudi.crearPeer) window.Cudi.crearPeer(true);
@@ -86,16 +94,25 @@ window.Cudi.connectToSignaling = function () {
 
         console.log(`📥 [Signaling] Mensaje recibido: ${mensaje.type} desde ${mensaje.fromPeerId || 'Servidor'}`);
 
-        if (mensaje.type === "signal") {
-            // Handle reunion/handshake update
-            const fromId = mensaje.fromPeerId;
-            if (fromId) {
-                if (window.Cudi.crearPeer) {
-                    // createPeer should handle existing connection logic (Day 3/5 Requirement)
-                    window.Cudi.crearPeer(false, fromId, mensaje);
-                }
+        if (mensaje.type === "peer_found") {
+            const targetId = mensaje.peerId;
+            console.log(`🎯 [Signaling] Peer found: ${targetId}. Initing WebRTC...`);
+
+            // Clear search timeout
+            if (state.activeFinds.has(targetId)) {
+                clearTimeout(state.activeFinds.get(targetId));
+                state.activeFinds.delete(targetId);
             }
-        } else if (window.Cudi.manejarMensaje) {
+
+            // Iniciar WebRTC como Offer
+            if (window.Cudi.crearPeer) window.Cudi.crearPeer(true, targetId);
+
+            // Refresh UI
+            if (window.Cudi.ui) window.Cudi.ui.renderRecentChats();
+
+        } else if (mensaje.type === "peer_not_found") {
+            console.warn(`⚠️ [Signaling] Peer ${mensaje.target} not found on server.`);
+        } else if (mensaje.type === "signal") {
             window.Cudi.manejarMensaje(mensaje);
         }
     });
@@ -104,24 +121,37 @@ window.Cudi.connectToSignaling = function () {
 window.Cudi.enviarSocket = function (obj) {
     const state = window.Cudi.state;
     let mensajeAEnviar;
-    if (obj.type === "join") {
-        mensajeAEnviar = JSON.stringify(obj);
-    } else if (
-        obj.tipo === "oferta" ||
-        obj.tipo === "respuesta" ||
-        obj.tipo === "candidato"
-    ) {
+
+    const type = obj.type || obj.tipo;
+
+    if (window.Cudi.appType === 'cudi-messenger') {
+        // Messenger Protocol
         mensajeAEnviar = JSON.stringify({
-            type: "signal",
+            appType: 'cudi-messenger',
             ...obj,
-            appType: window.Cudi.appType,
-            room: state.salaId,
+            type: type // Normalize
         });
     } else {
-        mensajeAEnviar = JSON.stringify({
-            ...obj,
-            appType: window.Cudi.appType
-        });
+        // Cloaks/Sync Protocol
+        if (type === "join") {
+            mensajeAEnviar = JSON.stringify(obj);
+        } else if (
+            type === "oferta" ||
+            type === "respuesta" ||
+            type === "candidato"
+        ) {
+            mensajeAEnviar = JSON.stringify({
+                type: "signal",
+                ...obj,
+                appType: window.Cudi.appType,
+                room: state.salaId,
+            });
+        } else {
+            mensajeAEnviar = JSON.stringify({
+                ...obj,
+                appType: window.Cudi.appType
+            });
+        }
     }
 
     // Security Check: Payload Size Limit
@@ -141,7 +171,29 @@ window.Cudi.enviarSocket = function (obj) {
         console.log(`📤 [Signaling] Enviando: ${JSON.parse(mensajeAEnviar).type}`);
         state.socket.send(mensajeAEnviar);
     } else {
-        console.log(`⏳ [Signaling] Socket no listo. Encolando mensaje: ${JSON.parse(mensajeAEnviar).type}`);
+        console.log(`⏳ [Signaling] Socket no listo. Encolando mensaje (FIFO): ${JSON.parse(mensajeAEnviar).type}`);
         state.mensajePendiente.push(mensajeAEnviar);
     }
 }
+
+window.Cudi.findPeer = function (peerId) {
+    const state = window.Cudi.state;
+    if (state.activeFinds.has(peerId)) return; // Busqueda ya en curso
+
+    console.log(`🔍 [Signaling-Messenger] Iniciando find_peer para: ${peerId}`);
+    window.Cudi.enviarSocket({
+        type: 'find_peer',
+        targetPeerId: peerId
+    });
+
+    const timeoutId = setTimeout(() => {
+        if (state.activeFinds.has(peerId)) {
+            state.activeFinds.delete(peerId);
+            window.Cudi.showToast("El contacto sigue offline, te avisaremos cuando aparezca.", "info");
+            if (window.Cudi.ui) window.Cudi.ui.renderRecentChats();
+        }
+    }, 30000);
+
+    state.activeFinds.set(peerId, timeoutId);
+    if (window.Cudi.ui) window.Cudi.ui.renderRecentChats();
+};

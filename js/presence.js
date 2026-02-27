@@ -90,6 +90,7 @@ const presenceManager = {
         if (instance && instance.dc && instance.dc.readyState === 'open') {
             const profile = {
                 type: 'profile',
+                myId: window.Cudi.state.myId,
                 name: window.Cudi.state.localAlias,
                 pronouns: localStorage.getItem('cloak_pronouns') || '',
                 photo: localStorage.getItem('cloak_photo') || null,

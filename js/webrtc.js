@@ -40,9 +40,8 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
         if (event.candidate) {
             console.log("❄️ [WebRTC] Nuevo candidato ICE generado");
             window.Cudi.enviarSocket({
-                tipo: "candidato",
+                type: "candidate",
                 candidato: event.candidate,
-                sala: state.salaId,
                 targetPeerId: targetId
             });
         } else {
@@ -76,9 +75,8 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
             .then(() => {
                 logger("Sending offer to:", targetId);
                 window.Cudi.enviarSocket({
-                    tipo: "oferta",
-                    oferta: pc.localDescription,
-                    sala: state.salaId,
+                    type: "offer",
+                    offer: pc.localDescription,
                     targetPeerId: targetId
                 });
             })
@@ -104,8 +102,13 @@ window.Cudi.setupDataChannel = function (channel, peerId) {
             window.Cudi.syncPendingMessages(peerId);
         }
 
-        // Sync Profile
+        // Sync Profile (including permanent ID)
         window.Cudi.syncProfile(peerId);
+
+        // Notify restored connection if it was a find_peer
+        if (window.Cudi.state.currentPeerId === peerId) {
+            window.Cudi.showToast(`¡Conexión restaurada con el peer!`, "success");
+        }
 
         // Start Heartbeat for this channel
         window.Cudi.startHeartbeat(peerId);
@@ -144,9 +147,9 @@ window.Cudi.manejarMensaje = function (mensaje) {
 
     switch (mensaje.type) {
         case "joined":
-            state.myId = mensaje.yourId;
-            logger("Successfully joined. My ID:", state.myId);
-            window.Cudi.showToast("Joined Cloak.", "success");
+            state.sessionId = mensaje.yourId;
+            logger("Successfully joined. Session ID:", state.sessionId, "Persistent ID:", state.myId);
+            window.Cudi.showToast("Logged in successfully.", "success");
             window.Cudi.toggleLoading(false);
 
             if (mensaje.peers && mensaje.peers.length > 0) {
@@ -156,6 +159,12 @@ window.Cudi.manejarMensaje = function (mensaje) {
                     window.Cudi.crearPeer(true, firstPeer.id);
                 }
             }
+            break;
+
+        case "registered":
+            state.sessionId = mensaje.peerId; // In messenger peerId is the session match
+            logger("Registered on messenger. ID:", state.sessionId);
+            window.Cudi.toggleLoading(false);
             break;
 
         case "peer_joined":
@@ -172,40 +181,46 @@ window.Cudi.manejarMensaje = function (mensaje) {
             window.Cudi.showToast("A peer left the cloak.", "info");
             break;
 
-        case "signal": {
+        case "signal":
+        case "offer":
+        case "answer":
+        case "candidate": {
             const fromId = mensaje.fromPeerId;
+            const type = mensaje.type;
 
-            if (mensaje.tipo === "oferta") {
+            if (type === "oferta" || type === "offer") {
                 // Handshake Manager: Instantiate automatically on offer
                 let instance = state.activeChats.get(fromId);
                 if (!instance) {
                     instance = window.Cudi.crearPeer(false, fromId);
                 }
                 const pc = instance.pc;
+                const sdp = mensaje.oferta || mensaje.offer;
 
-                pc.setRemoteDescription(new RTCSessionDescription(mensaje.oferta))
+                pc.setRemoteDescription(new RTCSessionDescription(sdp))
                     .then(() => pc.createAnswer())
                     .then((respuesta) => pc.setLocalDescription(respuesta))
                     .then(() => {
                         window.Cudi.enviarSocket({
-                            tipo: "respuesta",
-                            respuesta: pc.localDescription,
-                            sala: state.salaId,
+                            type: "answer",
+                            answer: pc.localDescription,
                             targetPeerId: fromId
                         });
                     })
                     .catch((error) => console.error("Error handling offer:", error));
 
-            } else if (mensaje.tipo === "respuesta") {
+            } else if (type === "respuesta" || type === "answer") {
                 const instance = state.activeChats.get(fromId);
+                const sdp = mensaje.respuesta || mensaje.answer;
                 if (instance) {
-                    instance.pc.setRemoteDescription(new RTCSessionDescription(mensaje.respuesta)).catch(console.error);
+                    instance.pc.setRemoteDescription(new RTCSessionDescription(sdp)).catch(console.error);
                 }
 
-            } else if (mensaje.tipo === "candidato") {
+            } else if (type === "candidato" || type === "candidate") {
                 const instance = state.activeChats.get(fromId);
+                const cand = mensaje.candidato || mensaje.candidate;
                 if (instance) {
-                    instance.pc.addIceCandidate(new RTCIceCandidate(mensaje.candidato)).catch(console.error);
+                    instance.pc.addIceCandidate(new RTCIceCandidate(cand)).catch(console.error);
                 }
             }
             break;

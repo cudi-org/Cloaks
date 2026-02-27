@@ -136,11 +136,13 @@ window.Cudi.ui = {
             item.className = `channel-item dm-item ${window.Cudi.state.currentPeerId === peerId ? 'active' : ''}`;
 
             const online = window.Cudi.state.activeChats.has(peerId);
+            const searching = window.Cudi.state.activeFinds.has(peerId);
+            const statusClass = online ? 'social' : (searching ? 'searching' : 'ghost');
 
             item.innerHTML = `
                 <div class="user-avatar-wrapper-mini">
                     <img src="${photo}" class="avatar-mini">
-                    <span class="status-dot-mini ${online ? 'social' : 'ghost'}"></span>
+                    <span class="status-dot-mini ${statusClass}"></span>
                 </div>
                 <span class="channel-name">${alias}</span>
                 <button class="delete-chat-btn" title="Delete conversation">×</button>
@@ -193,7 +195,9 @@ window.Cudi.ui = {
             }
 
             history.forEach(msg => {
-                const type = msg.sender === window.Cudi.state.myId ? 'sent' : 'received';
+                // Sender logic: Any message NOT from the peerId is assumed to be FROM ME
+                // This handles same-browser testing where both tabs might share the same ID.
+                const type = (msg.sender && msg.sender === peerId) ? 'received' : 'sent';
                 window.Cudi.displayChatMessage(msg.content, type, msg.alias);
             });
         });
@@ -202,12 +206,8 @@ window.Cudi.ui = {
         const online = window.Cudi.state.activeChats.has(peerId);
         const input = document.getElementById('chatInput');
         if (!online) {
-            window.Cudi.showToast(`Buscando conexión con ${peerId}...`, "info");
-            // Iniciar reencuentro
-            window.Cudi.enviarSocket({
-                type: 'find_peer',
-                target: peerId
-            });
+            // Iniciar reencuentro via helper con timeout
+            window.Cudi.findPeer(peerId);
 
             // Disable input until connected
             if (input) {
