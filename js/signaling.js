@@ -118,7 +118,7 @@ window.Cudi.registerOrJoin = function () {
             room: state.salaId,
             password: state.roomPassword,
             alias: state.localAlias,
-            peerId: state.myId // Fundamental para que otros nos identifiquen
+            peerId: state.myId
         });
     } else {
         window.Cudi.appType = "cudi-messenger";
@@ -176,7 +176,7 @@ window.Cudi.findPeer = function (peerId) {
     window.Cudi.enviarSocket({
         type: 'find_peer',
         targetPeerId: peerId,
-        appType: 'cudi-messenger'
+        appType: window.Cudi.appType || 'cudi-messenger'
     });
 
     const timeoutId = setTimeout(() => {

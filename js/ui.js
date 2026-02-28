@@ -10,6 +10,7 @@ window.Cudi.ui = {
         this.renderRecentChats();
         this.bindMobileSidebars();
         this.bindHomeButton();
+        this.bindDevTools();
 
         // Start Signaling early for messenger features
         if (window.Cudi.connectToSignaling) {
@@ -47,6 +48,17 @@ window.Cudi.ui = {
         const overlay = document.getElementById('sidebar-overlay');
         shell.classList.remove('menu-open', 'members-open');
         overlay.classList.add('hidden');
+    },
+
+    bindDevTools() {
+        const btnClear = document.getElementById('btn-clear-opfs');
+        btnClear?.addEventListener('click', async () => {
+            if (confirm("¿Estás seguro de que quieres borrar TODO el historial y la caché local? (Solo recomendado para desarrollo)")) {
+                await window.Cudi.opfs.clearAllHistory();
+                window.Cudi.showToast("Caché de mensajes y contactos borrada.", "success");
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        });
     },
 
     bindMobileSidebars() {
