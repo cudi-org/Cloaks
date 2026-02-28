@@ -210,17 +210,24 @@ window.Cudi.ui = {
         if (status === 'searching') {
             window.Cudi.findPeer(peerId);
             if (input && window.Cudi.state.currentPeerId === peerId) {
-                input.placeholder = "Buscando contacto... (Estableciendo túnel)";
+                input.placeholder = "Buscando contacto... (Localizando en red)";
                 input.disabled = true;
             }
-            this.renderRecentChats();
+        } else if (status === 'connecting') {
+            if (input && window.Cudi.state.currentPeerId === peerId) {
+                input.placeholder = "Estableciendo túnel P2P seguro...";
+                input.disabled = true;
+            }
         } else if (status === 'online') {
             if (input && window.Cudi.state.currentPeerId === peerId) {
-                input.placeholder = `Message #${peerId}`;
+                const state = window.Cudi.state;
+                const peer = state.peers ? state.peers.get(peerId) : null;
+                const alias = peer ? (peer.alias || peerId) : peerId;
+                input.placeholder = `Message #${alias}`;
                 input.disabled = false;
             }
-            this.renderRecentChats();
         }
+        this.renderRecentChats();
     },
 
     async switchChat(peerId) {
@@ -242,9 +249,11 @@ window.Cudi.ui = {
         // 1. Cargar historial (Instantáneo)
         await this.renderMessagesFromDisk(peerId);
 
-        // 2. Connection logic: If offline, try to find peer
-        const online = window.Cudi.state.activeChats.has(peerId);
-        if (!online) {
+        // 2. Connection logic: Check if we have a REAL open tunnel
+        const instance = window.Cudi.state.activeChats.get(peerId);
+        const isActuallyConnected = instance && instance.dc && instance.dc.readyState === 'open';
+
+        if (!isActuallyConnected) {
             this.setChatStatus(peerId, 'searching');
         } else {
             this.setChatStatus(peerId, 'online');
@@ -256,10 +265,15 @@ window.Cudi.ui = {
         if (!state?.peers) return;
         const peer = state.peers.get(peerId);
         const headerInfo = document.getElementById('header-peer-info');
+
+        // Priority: Always update the name immediately
+        const displayName = peer ? (peer.alias || peerId) : peerId;
+        const nameEl = document.getElementById('current-channel-name');
+        if (nameEl) nameEl.textContent = displayName;
+
         if (!peer || !headerInfo) return;
 
         headerInfo.classList.remove('hidden');
-        document.getElementById('current-channel-name').textContent = peer.alias || peerId;
         document.getElementById('peer-pronouns').textContent = peer.pronouns ? `(${peer.pronouns})` : '';
 
         const spotify = document.getElementById('peer-spotify');

@@ -46,13 +46,21 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
 
     if (!targetId) return;
 
-    // Instance System: Check if already exists
+    // Instance System: Robust Check
     if (state.activeChats.has(targetId)) {
         const existing = state.activeChats.get(targetId);
-        if (existing.pc.connectionState !== 'closed' && existing.pc.connectionState !== 'failed') {
-            logger(`Chat instance for ${targetId} already exists and is active.`);
+        const pcState = existing.pc.connectionState;
+
+        // If it's already connected or trying to, we stay with it
+        if (pcState === 'connected' || pcState === 'connecting') {
+            logger(`Chat instance for ${targetId} already exists and is in state: ${pcState}`);
             return existing;
         }
+
+        // If it's disconnected, failed or closed, we MUST cleanup and restart
+        logger(`Cleaning up stale/failed connection (${pcState}) for ${targetId}`);
+        try { existing.pc.close(); } catch (e) { }
+        state.activeChats.delete(targetId);
     }
 
     logger(`Creating new PeerConnection for: ${targetId}`);
@@ -104,6 +112,10 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
     if (isOffer) {
         const dc = pc.createDataChannel("canalDatos");
         window.Cudi.setupDataChannel(dc, targetId);
+
+        if (window.Cudi.ui && window.Cudi.ui.setChatStatus) {
+            window.Cudi.ui.setChatStatus(targetId, 'connecting');
+        }
 
         console.log("🏗️ [STEP 6] Creando RTC Offer...");
         pc.createOffer()
@@ -327,6 +339,7 @@ function manejarChunk(data, peerId) {
                 const formattedMsg = {
                     type: msg.subType || "text",
                     content: msg.content || msg.message,
+                    alias: msg.alias || peerId, // Persist alias
                     timestamp: msg.timestamp || Date.now(),
                     sender: peerId
                 };

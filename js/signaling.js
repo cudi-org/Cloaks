@@ -85,7 +85,7 @@ window.Cudi.connectToSignaling = function () {
             // 1. Notificar a la UI
             window.Cudi.showToast(`¡${targetId} está online! Conectando...`, "success");
             if (window.Cudi.ui && window.Cudi.ui.setChatStatus) {
-                window.Cudi.ui.setChatStatus(targetId, 'online');
+                window.Cudi.ui.setChatStatus(targetId, 'connecting');
             }
 
             // 2. Limpiar búsqueda
