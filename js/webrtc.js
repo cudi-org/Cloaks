@@ -155,6 +155,11 @@ window.Cudi.setupDataChannel = function (channel, peerId) {
             if (window.Cudi.ui.renderRecentChats) window.Cudi.ui.renderRecentChats();
         }
 
+        // Auto-select if in Cloaks mode and nothing selected
+        if (!state.currentPeerId && window.Cudi.appType === 'cloaks') {
+            state.currentPeerId = peerId;
+        }
+
         const chatInput = document.getElementById("chatInput");
         const sendChatBtn = document.getElementById("sendChatBtn");
         if (chatInput && window.Cudi.state.currentPeerId === peerId) {
@@ -191,8 +196,10 @@ window.Cudi.manejarMensaje = function (mensaje) {
 
             if (mensaje.peers && mensaje.peers.length > 0) {
                 mensaje.peers.forEach(p => state.peers.set(p.id, p));
+                const firstPeer = mensaje.peers[0];
+                if (!state.currentPeerId) state.currentPeerId = firstPeer.id;
+
                 if (state.modo === "send") {
-                    const firstPeer = mensaje.peers[0];
                     window.Cudi.crearPeer(true, firstPeer.id);
                 }
             }
@@ -207,6 +214,8 @@ window.Cudi.manejarMensaje = function (mensaje) {
         case "peer_joined":
             state.peers.set(mensaje.peerId, { id: mensaje.peerId, alias: mensaje.alias });
             window.Cudi.showToast(`${mensaje.alias} joined.`, "info");
+            if (!state.currentPeerId) state.currentPeerId = mensaje.peerId;
+
             if (state.modo === "send") {
                 logger("Initiating negotiation with new peer:", mensaje.peerId);
                 window.Cudi.crearPeer(true, mensaje.peerId);

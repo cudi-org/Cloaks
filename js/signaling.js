@@ -22,7 +22,15 @@ window.Cudi.iniciarConexion = function () {
 
 window.Cudi.connectToSignaling = function () {
     const state = window.Cudi.state;
-    if (state.socket && (state.socket.readyState === WebSocket.OPEN || state.socket.readyState === WebSocket.CONNECTING)) return;
+
+    // Si el socket ya está abierto, simplemente registramos o nos unimos
+    if (state.socket && state.socket.readyState === WebSocket.OPEN) {
+        window.Cudi.registerOrJoin();
+        return;
+    }
+
+    // Si está conectando, esperamos
+    if (state.socket && state.socket.readyState === WebSocket.CONNECTING) return;
 
     console.log("📡 [Signaling] Iniciando conexión con Render...");
     state.socket = new WebSocket(window.Cudi.SIGNALING_SERVER_URL);
@@ -30,25 +38,8 @@ window.Cudi.connectToSignaling = function () {
     state.socket.onopen = () => {
         console.log("🔵 [STEP 1] Socket Abierto. Registrando...");
 
-        // Determine Flow: Room (Cloaks) or P2P (Messenger)
-        if (state.salaId) {
-            window.Cudi.appType = "cloaks";
-            console.log(`🏠 [Signaling] Uniéndome a sala: ${state.salaId}`);
-            window.Cudi.enviarSocket({
-                type: "join",
-                room: state.salaId,
-                password: state.roomPassword,
-                alias: state.localAlias
-            });
-        } else {
-            window.Cudi.appType = "cudi-messenger";
-            console.log(`🆔 [Signaling] Registrando ID permanente: ${state.myId}`);
-            window.Cudi.enviarSocket({
-                type: "register",
-                peerId: state.myId,
-                alias: state.localAlias
-            });
-        }
+        // Ejecutamos la lógica de registro o unión
+        window.Cudi.registerOrJoin();
 
         // 2. SEGUNDO: Vaciamos la cola FIFO
         console.log(`📤 [Signaling] Vaciando cola. Mensajes pendientes: ${state.mensajePendiente.length}`);
@@ -64,10 +55,6 @@ window.Cudi.connectToSignaling = function () {
                 state.socket.send(JSON.stringify({ type: 'ping', appType: window.Cudi.appType }));
             }
         }, 30000);
-
-        if (state.modo === "send" && window.Cudi.iniciarHandshakeWebRTC) {
-            // We'll wait for 'joined' or handle specifically
-        }
     };
 
     state.socket.onclose = () => {
@@ -118,6 +105,30 @@ window.Cudi.connectToSignaling = function () {
     };
 }
 
+window.Cudi.registerOrJoin = function () {
+    const state = window.Cudi.state;
+    // Determine Flow: Room (Cloaks) or P2P (Messenger)
+    if (state.salaId) {
+        window.Cudi.appType = "cloaks";
+        console.log(`🏠 [Signaling] Uniéndome a sala: ${state.salaId}`);
+        window.Cudi.enviarSocket({
+            type: "join",
+            room: state.salaId,
+            password: state.roomPassword,
+            alias: state.localAlias,
+            peerId: state.myId // Fundamental para que otros nos identifiquen
+        });
+    } else {
+        window.Cudi.appType = "cudi-messenger";
+        console.log(`🆔 [Signaling] Registrando ID permanente: ${state.myId}`);
+        window.Cudi.enviarSocket({
+            type: "register",
+            peerId: state.myId,
+            alias: state.localAlias
+        });
+    }
+};
+
 window.Cudi.enviarSocket = function (obj) {
     const state = window.Cudi.state;
     // Forzamos appType dinámico
@@ -127,15 +138,18 @@ window.Cudi.enviarSocket = function (obj) {
     };
 
     // Compatibilidad con el servidor para salas (Cloaks)
-    // El servidor en handleCloakLogic solo acepta 'join' y 'signal'.
-    // Si enviamos offer/answer/candidate directamente, los ignora.
-    if ((payload.appType === 'cloaks' || payload.appType === 'cudi-sync') &&
-        ['offer', 'answer', 'candidate', 'signal'].includes(payload.type)) {
-        // Si ya es type 'signal' pero no tiene signalType, es una señal genérica.
-        // Si es offer/answer/candidate, lo envolvemos.
-        if (payload.type !== 'signal') {
-            payload.signalType = payload.type; // Guardamos el tipo real
-            payload.type = 'signal';           // Enmascaramos
+    if ((payload.appType === 'cloaks' || payload.appType === 'cudi-sync')) {
+        // Añadimos room a todos los mensajes para que el servidor sepa rutearlos
+        if (state.salaId && !payload.room) {
+            payload.room = state.salaId;
+        }
+
+        // El servidor en handleCloakLogic solo acepta 'join' y 'signal'.
+        if (['offer', 'answer', 'candidate', 'signal'].includes(payload.type)) {
+            if (payload.type !== 'signal') {
+                payload.signalType = payload.type; // Guardamos el tipo real
+                payload.type = 'signal';           // Enmascaramos
+            }
         }
     }
 
