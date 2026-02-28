@@ -72,7 +72,7 @@ window.Cudi.connectToSignaling = function () {
         try {
             const data = typeof event.data === 'string' ? event.data : await event.data.text();
             mensaje = JSON.parse(data);
-        } catch (_) {
+        } catch {
             return;
         }
 

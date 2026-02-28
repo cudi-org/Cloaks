@@ -59,7 +59,7 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
 
         // If it's disconnected, failed or closed, we MUST cleanup and restart
         logger(`Cleaning up stale/failed connection (${pcState}) for ${targetId}`);
-        try { existing.pc.close(); } catch (_) {
+        try { existing.pc.close(); } catch {
             /* Silent close failed/stale connection */
         }
         state.activeChats.delete(targetId);
@@ -237,7 +237,7 @@ window.Cudi.manejarMensaje = function (mensaje) {
             window.Cudi.toggleLoading(false);
             break;
 
-        case "peer_joined":
+        case "peer_joined": {
             const realId = mensaje.permanentId || mensaje.peerId;
             state.peers.set(realId, { id: realId, alias: mensaje.alias });
             window.Cudi.showToast(`${mensaje.alias || realId} se ha unido a la sala.`, "info");
@@ -256,6 +256,7 @@ window.Cudi.manejarMensaje = function (mensaje) {
                 window.Cudi.crearPeer(true, realId);
             }
             break;
+        }
 
         case "peer_left":
             state.peers.delete(mensaje.peerId);
@@ -472,7 +473,7 @@ window.Cudi.stopVideo = function () {
                 const senders = state.peer.getSenders();
                 const sender = senders.find(s => s.track === track);
                 if (sender) {
-                    try { state.peer.removeTrack(sender); } catch (_) {
+                    try { state.peer.removeTrack(sender); } catch {
                         // Ignore removeTrack errors
                     }
                 }
@@ -525,7 +526,7 @@ window.Cudi.startScreenShare = async function () {
                 if (sender) sender.replaceTrack(camTrack);
                 document.getElementById('localVideo').srcObject = window.Cudi.localStream;
             } else {
-                if (sender) try { state.peer.removeTrack(sender); } catch (_) {
+                if (sender) try { state.peer.removeTrack(sender); } catch {
                     // Ignore track removal error
                 }
                 window.Cudi.stopVideo();
