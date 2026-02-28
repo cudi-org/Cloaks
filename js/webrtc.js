@@ -209,18 +209,23 @@ window.Cudi.manejarMensaje = function (mensaje) {
             window.Cudi.toggleLoading(false);
 
             if (mensaje.peers && mensaje.peers.length > 0) {
-                mensaje.peers.forEach(p => state.peers.set(p.id, p));
+                mensaje.peers.forEach(p => {
+                    const idToUse = p.permanentId || p.id;
+                    state.peers.set(idToUse, p);
+                });
 
                 // If in Cloaks mode, automatically select the first peer to start talking
                 if (window.Cudi.appType === 'cloaks' && !state.currentPeerId) {
-                    state.currentPeerId = mensaje.peers[0].id;
+                    const firstPeerId = mensaje.peers[0].permanentId || mensaje.peers[0].id;
+                    state.currentPeerId = firstPeerId;
                     if (window.Cudi.ui) window.Cudi.ui.updateChatHeader(state.currentPeerId);
                 }
 
                 if (state.modo === "send") {
                     mensaje.peers.forEach(p => {
-                        logger("Auto-negotiating with peer in room:", p.id);
-                        window.Cudi.crearPeer(true, p.id);
+                        const idToUse = p.permanentId || p.id;
+                        logger("Auto-negotiating with peer in room:", idToUse);
+                        window.Cudi.crearPeer(true, idToUse);
                     });
                 }
             }
@@ -233,21 +238,22 @@ window.Cudi.manejarMensaje = function (mensaje) {
             break;
 
         case "peer_joined":
-            state.peers.set(mensaje.peerId, { id: mensaje.peerId, alias: mensaje.alias });
-            window.Cudi.showToast(`${mensaje.alias || mensaje.peerId} se ha unido a la sala.`, "info");
+            const realId = mensaje.permanentId || mensaje.peerId;
+            state.peers.set(realId, { id: realId, alias: mensaje.alias });
+            window.Cudi.showToast(`${mensaje.alias || realId} se ha unido a la sala.`, "info");
 
             // Auto-select if in Cloaks mode and we were idle
             if (window.Cudi.appType === 'cloaks' && !state.currentPeerId) {
-                state.currentPeerId = mensaje.peerId;
+                state.currentPeerId = realId;
                 if (window.Cudi.ui) {
-                    window.Cudi.ui.updateChatHeader(mensaje.peerId);
+                    window.Cudi.ui.updateChatHeader(realId);
                     window.Cudi.ui.renderRecentChats();
                 }
             }
 
             if (state.modo === "send") {
-                logger("Initiating negotiation with new peer:", mensaje.peerId);
-                window.Cudi.crearPeer(true, mensaje.peerId);
+                logger("Initiating negotiation with new peer:", realId);
+                window.Cudi.crearPeer(true, realId);
             }
             break;
 

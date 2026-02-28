@@ -118,7 +118,8 @@ window.Cudi.registerOrJoin = function () {
             room: state.salaId,
             password: state.roomPassword,
             alias: state.localAlias,
-            peerId: state.myId
+            peerId: state.myId,
+            permanentId: state.myId // <--- Added per requirement
         });
     } else {
         window.Cudi.appType = "cudi-messenger";

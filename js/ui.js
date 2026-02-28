@@ -163,6 +163,7 @@ window.Cudi.ui = {
 
             const item = document.createElement('div');
             item.className = `channel-item dm-item ${state.currentPeerId === peerId ? 'active' : ''}`;
+            item.setAttribute('data-id', peerId);
 
             const instance = state.activeChats.get(peerId);
             const online = instance && instance.dc && instance.dc.readyState === 'open';
