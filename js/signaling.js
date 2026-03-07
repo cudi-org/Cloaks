@@ -68,7 +68,7 @@ window.Cudi.connectToSignaling = function () {
             }
 
             if (data.type === "peer_found") {
-                const targetId = data.peerId;
+                const targetId = data.permanentId || data.peerId;
 
                 window.Cudi.showToast(`¡${targetId} It's online! Connecting...`, "success");
                 document.getElementById('meeting-tools')?.classList.add('hidden');
@@ -88,7 +88,6 @@ window.Cudi.connectToSignaling = function () {
                 window.Cudi.manejarMensaje(data);
             }
         } catch {
-            // Ignore parse errors
         }
     };
 
@@ -137,7 +136,7 @@ window.Cudi.registerOrJoin = function () {
 
 window.Cudi.enviarSocket = function (obj) {
     const state = window.Cudi.state;
-    const payload = { ...obj };
+    const payload = { ...obj, permanentId: state.myId };
 
     if (!state.salaId) {
         payload.appType = 'cudi-messenger';

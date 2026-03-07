@@ -30,7 +30,6 @@ window.Cudi.handleOffer = function (mensaje) {
             });
         })
         .catch(() => {
-            // Ignore potential errors
         });
 };
 
@@ -52,7 +51,6 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
         }
 
         try { existing.pc.close(); } catch {
-            // Silent close
         }
         state.activeChats.delete(targetId);
     }
@@ -129,7 +127,6 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
                 });
             })
             .catch(() => {
-                // Ignore
             });
     }
 
@@ -206,7 +203,6 @@ window.Cudi.setupDataChannel = function (channel, peerId) {
                 return;
             }
         } catch {
-            // Unused
         }
 
         manejarChunk(event.data, peerId);
@@ -214,6 +210,11 @@ window.Cudi.setupDataChannel = function (channel, peerId) {
 }
 
 window.Cudi.manejarMensaje = function (mensaje) {
+    const fromId = mensaje.permanentId || mensaje.fromPeerId || mensaje.peerId || mensaje.sender || mensaje.fromId || mensaje.from;
+    if (fromId) {
+        mensaje.fromPeerId = fromId;
+        mensaje.peerId = fromId;
+    }
     const state = window.Cudi.state;
 
     switch (mensaje.type) {
@@ -291,7 +292,7 @@ window.Cudi.manejarMensaje = function (mensaje) {
         case "offer":
         case "answer":
         case "candidate": {
-            const fromId = mensaje.fromPeerId || mensaje.peerId || mensaje.sender || mensaje.permanentId || mensaje.fromId || mensaje.from;
+            const fromId = mensaje.permanentId || mensaje.fromPeerId || mensaje.peerId || mensaje.sender || mensaje.fromId || mensaje.from;
 
             mensaje.fromPeerId = fromId;
 
@@ -410,7 +411,6 @@ function manejarChunk(data, peerId) {
 
 
         } catch {
-            // Error parsing message
         }
     } else {
         if (data instanceof Blob) {
@@ -439,7 +439,6 @@ window.Cudi.renegotiate = async function (targetPeerId = null) {
                 targetPeerId: peerId
             });
         } catch {
-            // ignore error
         }
     };
 
@@ -448,7 +447,6 @@ window.Cudi.renegotiate = async function (targetPeerId = null) {
     } else if (state.currentPeerId) {
         await doRenegotiate(state.currentPeerId, state.activeChats.get(state.currentPeerId));
     } else {
-        // No current peer or target
     }
 };
 
@@ -586,7 +584,6 @@ window.Cudi.stopVoiceOnly = function () {
                 const sender = senders.find(s => s.track === track);
                 if (sender) {
                     try { pc.removeTrack(sender); } catch {
-                        // ignore error
                     }
                 }
             }
@@ -609,7 +606,6 @@ window.Cudi.stopVideo = function () {
                 const sender = senders.find(s => s.track === track);
                 if (sender) {
                     try { pc.removeTrack(sender); } catch {
-                        // ignore error
                     }
                 }
             }
@@ -660,7 +656,7 @@ window.Cudi.startScreenShare = async function () {
                 if (sender) sender.replaceTrack(camTrack);
                 document.getElementById('localVideo').srcObject = window.Cudi.localStream;
             } else {
-                if (sender) try { state.peer.removeTrack(sender); } catch { /* channel closed */ }
+                if (sender) try { state.peer.removeTrack(sender); } catch { }
                 window.Cudi.stopVideo();
                 window.Cudi.renegotiate();
             }
