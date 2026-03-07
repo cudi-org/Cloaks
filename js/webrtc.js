@@ -30,6 +30,7 @@ window.Cudi.handleOffer = function (mensaje) {
             });
         })
         .catch(() => {
+            // Silence silent errors
         });
 };
 
@@ -51,6 +52,7 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
         }
 
         try { existing.pc.close(); } catch {
+            // Ignore potential close error
         }
         state.activeChats.delete(targetId);
     }
@@ -127,6 +129,7 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
                 });
             })
             .catch(() => {
+                // Ignore silent errors
             });
     }
 
@@ -203,6 +206,7 @@ window.Cudi.setupDataChannel = function (channel, peerId) {
                 return;
             }
         } catch {
+            // Message format not recognized
         }
 
         manejarChunk(event.data, peerId);
@@ -411,6 +415,7 @@ function manejarChunk(data, peerId) {
 
 
         } catch {
+            // Silent catch
         }
     } else {
         if (data instanceof Blob) {
@@ -439,6 +444,7 @@ window.Cudi.renegotiate = async function (targetPeerId = null) {
                 targetPeerId: peerId
             });
         } catch {
+            // Negotiation failed silently
         }
     };
 
@@ -447,6 +453,7 @@ window.Cudi.renegotiate = async function (targetPeerId = null) {
     } else if (state.currentPeerId) {
         await doRenegotiate(state.currentPeerId, state.activeChats.get(state.currentPeerId));
     } else {
+        // No current peer or target
     }
 };
 
@@ -584,6 +591,7 @@ window.Cudi.stopVoiceOnly = function () {
                 const sender = senders.find(s => s.track === track);
                 if (sender) {
                     try { pc.removeTrack(sender); } catch {
+                        // Channel might be closed
                     }
                 }
             }
@@ -606,6 +614,7 @@ window.Cudi.stopVideo = function () {
                 const sender = senders.find(s => s.track === track);
                 if (sender) {
                     try { pc.removeTrack(sender); } catch {
+                        // Track removal failed or Peer connection closed
                     }
                 }
             }
@@ -656,7 +665,7 @@ window.Cudi.startScreenShare = async function () {
                 if (sender) sender.replaceTrack(camTrack);
                 document.getElementById('localVideo').srcObject = window.Cudi.localStream;
             } else {
-                if (sender) try { state.peer.removeTrack(sender); } catch { }
+                if (sender) try { state.peer.removeTrack(sender); } catch { /* channel closed */ }
                 window.Cudi.stopVideo();
                 window.Cudi.renegotiate();
             }

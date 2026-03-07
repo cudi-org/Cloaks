@@ -88,10 +88,12 @@ window.Cudi.connectToSignaling = function () {
                 window.Cudi.manejarMensaje(data);
             }
         } catch {
+            // Quietly ignore parsing mistakes
         }
     };
 
     state.socket.onerror = () => {
+        // Socket error handled by onClose or logic flow
     };
 
     state.socket.onclose = () => {

@@ -253,6 +253,6 @@ const identityManager = {
 window.identityManager = identityManager;
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof window !== 'undefined') {
-        identityManager.init().catch(() => { });
+        identityManager.init().catch(() => { /* identity initialization handled */ });
     }
 });

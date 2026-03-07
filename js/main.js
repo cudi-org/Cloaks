@@ -4,6 +4,7 @@ window.onerror = function () {
     return false;
 };
 window.onunhandledrejection = function () {
+    // Silent generic unhandled error
 };
 const salaStatus = document.getElementById("salaStatus");
 const chatInput = document.getElementById("chatInput");
@@ -82,7 +83,6 @@ function crearSala() {
             navigator.clipboard.writeText(url).then(() => {
                 window.Cudi.showToast("Link copied to clipboard!", "success");
             }).catch(() => {
-                // Ignore
             });
         });
     }
@@ -137,7 +137,6 @@ function iniciarTransferencia() {
             navigator.clipboard.writeText(url).then(() => {
                 window.Cudi.showToast("Link copied to clipboard!", "success");
             }).catch(() => {
-                // Ignore
             });
         });
     }
@@ -526,8 +525,7 @@ if (btnFullscreen) {
     btnFullscreen.addEventListener("click", () => {
         const videoContainer = document.getElementById("videoContainer");
         if (!document.fullscreenElement) {
-            videoContainer.requestFullscreen().catch(() => { /* ignore */ });
-            // Fullscreen
+            videoContainer.requestFullscreen().catch(() => { /* fullscreen request denied or failed */ });
         } else {
             document.exitFullscreen();
         }
