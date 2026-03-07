@@ -1,0 +1,10 @@
+window.Cudi = window.Cudi || {};
+const CONFIG = {
+    SIGNALING_SERVER_URL: 'wss://cloaks-signalin.onrender.com',
+    HEARTBEAT_INTERVAL: 30000,
+    ICE_SERVERS: [
+        { urls: "stun:stun.l.google.com:19302" }
+    ]
+};
+window.Cudi.CONFIG = CONFIG;
+window.CONFIG = CONFIG;

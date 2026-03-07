@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net wss://cloaks-signalin.onrender.com ws://localhost:8080; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob: data:; object-src 'self' blob: data:; frame-src 'self' blob: data:; worker-src 'self' blob:;">
+  <title>Cloaks - P2P Community</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" href="./icons/logo_matrix_v2.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="./css/styles.css" />
+  <link rel="stylesheet" href="./css/styles-append.css" />
+</head>
+
+<body>
+  <div id="app-container" class="app-shell">
+    <nav class="server-rail">
+      <div class="server-icon home-icon active" id="btn-home" title="Home">
+        <img src="./icons/logo_matrix_v2.png" alt="Cloaks"
+          style="width: 100%; height: 100%; border-radius: inherit; object-fit: cover;">
+      </div>
+      <div class="rail-divider"></div>
+      <div id="server-list">
+      </div>
+      <div class="server-icon add-server" id="tabCommunity" title="Enter Community">
+        <span>+</span>
+      </div>
+    </nav>
+
+    <aside class="channel-sidebar">
+      <header class="sidebar-header">
+        <h3 id="community-name-display">Cloaks</h3>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" id="community-settings-btn">
+          <path
+            d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+        </svg>
+      </header>
+
+      <div class="channel-scroller" id="channel-list">
+        <div id="menu-context-msg" class="empty-state-msg">
+          Load a Cloak to see channels
+        </div>
+      </div>
+
+      <div class="user-panel">
+        <div class="user-avatar-wrapper">
+          <img id="user-avatar-small" src="./icons/logo_matrix_v2.png" alt="Profile" class="avatar-small">
+          <span id="user-status-dot" class="status-dot ghost"></span>
+        </div>
+        <div class="user-details">
+          <span id="user-name-small">Anonymous</span>
+          <span id="user-tag-small">#0000</span>
+        </div>
+        <div class="user-actions">
+          <button id="zero-trace-btn" class="icon-btn-minimal" title="Zero-Trace Mode">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path
+                d="M12 2C6.47 2 2 6.47 2 12s4.47 10 9.03 10c.53 0 1.05-.04 1.56-.13.38-.07.6-.47.47-.84-.13-.37-.53-.55-.91-.49-.37.06-.74.09-1.12.09-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8c0 .38-.03.75-.09 1.12-.06.38.12.78.49.91.37.13.77-.09.84-.47.09-.51.13-1.03.13-1.56C22 6.47 17.53 2 12 2z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+          <button id="settings-btn" class="icon-btn-minimal" title="Settings">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path
+                d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="chat-main">
+      <header class="chat-header">
+        <div class="header-left">
+          <button id="mobile-menu-btn" class="mobile-only-btn" title="Open Menu">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+              <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+            </svg>
+          </button>
+          <span class="hash" style="display: none;">#</span>
+          <div class="header-titles">
+            <span id="current-channel-name"></span>
+            <div id="header-peer-info" class="header-peer-activity hidden">
+              <span id="peer-pronouns" style="opacity: 0.6; font-size: 10px;"></span>
+              <span id="peer-activity" class="activity-status"></span>
+            </div>
+          </div>
+        </div>
+        <div class="header-right">
+          <button id="btn-voice-call" class="header-icon-btn hidden" title="Voice Call">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path
+                d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2a15.045 15.045 0 01-6.59-6.59l2.2-2.21a.96.96 0 00.25-1.01c-.36-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.72 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z" />
+            </svg>
+          </button>
+          <button id="btn-video-call" class="header-icon-btn hidden" title="Video Call">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path
+                d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
+            </svg>
+          </button>
+          <button id="btn-clear-opfs" class="header-icon-btn" title="Clear All Cache (DEV)">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+            </svg>
+          </button>
+          <button id="mobile-members-btn" class="mobile-only-btn" title="Show Members">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+              <path
+                d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <section id="chat-scroller" class="messages-area">
+        <div id="welcome-screen" class="welcome-container">
+
+          <div class="welcome-content-wrap">
+            <h2 class="section-title">CLOAKS P2P</h2>
+            <p class="hero-text">The next generation of sovereign communications.</p>
+
+            <div id="menu" class="onboarding-menu">
+              <p class="menu-intro-text">What would you like to do today?</p>
+              <div class="action-cards">
+                <div class="action-card" id="tabSend">
+                  <h4>Create chat</h4>
+                  <p>Fast P2P chat</p>
+                </div>
+                <div class="action-card" id="tabReceive">
+                  <h4>Join chat</h4>
+                  <p>Join with a room code</p>
+                </div>
+                <div class="action-card" id="btnCreateCommunity">
+                  <h4>Create Cloak</h4>
+                  <p>Setup a private community</p>
+                </div>
+              </div>
+
+              <form id="form-send" onsubmit="return false;" class="entry-controls hidden">
+                <input type="text" id="aliasInput" placeholder="Your Alias" class="cloaks-input">
+                <input type="text" id="customRoomInput" placeholder="Room Code (Opt)" class="cloaks-input">
+                <input type="password" id="roomPasswordInput" placeholder="Room Password (Opt)" class="cloaks-input"
+                  autocomplete="new-password">
+                <button id="btnCreate" class="cloaks-btn-primary">Start Room</button>
+              </form>
+
+              <form id="form-receive" onsubmit="return false;" class="entry-controls hidden">
+                <input type="text" id="codigoSala" placeholder="Enter Room Code" class="cloaks-input">
+                <input type="password" id="joinPasswordInput" placeholder="Room Password (if locked)"
+                  class="cloaks-input" autocomplete="current-password">
+                <button id="unirseBtn" class="cloaks-btn-primary">Join Room</button>
+              </form>
+            </div>
+
+            <div class="beta-report-area">
+              <div class="report-divider"></div>
+              <p class="report-title">Help us improve Cloaks</p>
+              <p class="report-text">Found a glitch? Your feedback is essential for this beta. Please choose your
+                preferred way to report:</p>
+
+              <div class="report-options">
+                <a href="https://github.com/cudi-org/Cloaks/issues/new" target="_blank" class="report-action-item">
+                  <div class="report-icon-wrap github">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                      <path
+                        d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z" />
+                    </svg>
+                  </div>
+                  <div class="report-content">
+                    <span class="report-label">GitHub Issues</span>
+                    <span class="report-desc">Best for technical bugs and tracking progress.</span>
+                  </div>
+                </a>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="meeting-tools" class="meeting-setup-box hidden">
+          <div class="setup-header">
+            <span class="setup-label">PEER-TO-PEER ENCOUNTER</span>
+            <h3 id="salaStatus">Waiting for Room...</h3>
+          </div>
+          <div class="setup-actions">
+            <button id="copy-link-btn" class="cloaks-btn-primary" title="Copy Invite Link">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path
+                  d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+              </svg>
+              Copy Link
+            </button>
+            <button id="leave-room-btn" class="cloaks-btn-outline" onclick="window.Cudi.leaveRoom()">Leave
+              Room</button>
+          </div>
+        </div>
+
+        <div id="messagesDisplay" class="message-list hidden">
+        </div>
+      </section>
+
+      <footer class="chat-input-area hidden">
+        <div class="input-wrapper">
+          <button class="attach-btn">+</button>
+          <input type="text" id="chatInput" placeholder="Message #welcome" disabled>
+          <button id="sendChatBtn" class="send-btn" disabled>
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
+        </div>
+      </footer>
+    </main>
+
+    <aside class="member-sidebar">
+      <div class="member-group">
+        <h4>PEERS — <span id="peer-count">0</span></h4>
+        <div id="member-list">
+        </div>
+      </div>
+      <div id="sidebar-overlay" class="sidebar-backdrop hidden"></div>
+    </aside>
+  </div>
+
+  <footer>
+    <p>
+      &copy; 2026 CUDI - Comunidad de Usuarios para la Defensa Informática | <a href="#" id="open-legal-modal"
+        class="text-inherit">Legal Notice</a>
+    </p>
+  </footer>
+
+  <div id="toast-container"></div>
+  <div id="loading-overlay" class="hidden">
+    <img src="./icons/logo_matrix_v2.png" alt="Cloaks Logo" class="loading-logo">
+    <div class="spinner"></div>
+    <p id="loading-message">Initializing Protocol...</p>
+  </div>
+
+  <div id="info-modal" class="modal hidden">
+    <div class="specs-view glass">
+      <span id="close-modal" class="close-specs">&times;</span>
+      <div class="specs-header">
+        <label>SYSTEM PROTOCOL</label>
+        <h3>CLOAK CORE SPECIFICATIONS</h3>
+      </div>
+
+      <div class="specs-scroller">
+        <div class="spec-section">
+          <div class="spec-num">01</div>
+          <div class="spec-content">
+            <h4>DIRECT HANDSHAKE</h4>
+            <p>Connections originate from a direct trust exchange via encrypted URLs containing temporary public keys.
+              No central registry is consulted.</p>
+          </div>
+        </div>
+
+        <div class="spec-section">
+          <div class="spec-num">02</div>
+          <div class="spec-content">
+            <h4>SERVERLESS ARCHITECTURE</h4>
+            <p>Once established, messages flow through <strong>WebRTC Data Channels</strong>. "Sent" and "Received"
+              status are P2P signals, not database updates.</p>
+          </div>
+        </div>
+
+        <div class="spec-section">
+          <div class="spec-num">03</div>
+          <div class="spec-content">
+            <h4>OPFS LOCAL SILOS</h4>
+            <p>All interactions are indexed in your <strong>Origin Private File System</strong>. Your browser reads
+              your
+              local disk to reload history instantly.</p>
+          </div>
+        </div>
+
+        <div class="spec-section">
+          <div class="spec-num">04</div>
+          <div class="spec-content">
+            <h4>PEER CACHING & SURVIVABILITY</h4>
+            <p>The system caches last known public IPs to attempt direct reconnections, ensuring communication even if
+              the main gateway goes offline.</p>
+          </div>
+        </div>
+
+        <div class="spec-section">
+          <div class="spec-num">05</div>
+          <div class="spec-content">
+            <h4>IDENTITY UNDER DEMAND</h4>
+            <p>Profiles are partitioned. Your avatar and metadata are only transmitted if your <strong>Social
+                Mode</strong> is explicitly active for that peer.</p>
+          </div>
+        </div>
+
+        <div class="spec-section">
+          <div class="spec-num">06</div>
+          <div class="spec-content">
+            <h4>#SUPPORT - REPORT BUG</h4>
+            <p>Help us improve Cloaks. Found a glitch? Your feedback is essential for this beta.</p>
+            <div class="report-options" style="margin-top: 15px;">
+              <a href="https://github.com/cudi-org/Cloaks/issues/new" target="_blank" class="report-action-item"
+                style="padding: 10px;">
+                <div class="report-icon-wrap github" style="width: 30px; height: 30px;">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path
+                      d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z" />
+                  </svg>
+                </div>
+                <div class="report-content">
+                  <span class="report-label" style="font-size: 13px;">GitHub Issues</span>
+                </div>
+              </a>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="legal-modal" class="modal hidden">
+    <div class="legal-view glass">
+      <div class="legal-header">
+        <h3>SOVEREIGNTY AGREEMENT</h3>
+        <p class="subtitle">Security Protocols & P2P Terms</p>
+      </div>
+
+      <div class="legal-body">
+        <div class="disclaimer-grid">
+          <div class="disclaimer-item">
+            <div class="disc-text">
+              <label>Direct Transmission</label>
+              <p>Data flows exclusively between peers. No cloud storage is involved in this process.</p>
+            </div>
+          </div>
+          <div class="disclaimer-item">
+            <div class="disc-text">
+              <label>End-to-End Cryptography</label>
+              <p>All transfers are encrypted locally before leaving your device silo.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="responsibility-box">
+          <label>OPERATOR RESPONSIBILITY</label>
+          <p>By initializing this protocol, you acknowledge full legal and ethical responsibility for the data packets
+            transmitted. Cloaks is a neutral conduit for sovereign communication.</p>
+        </div>
+      </div>
+
+      <div class="legal-footer">
+        <button id="legal-accept-btn" class="cloaks-btn-primary">INITIALIZE PROTOCOL</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="modal hidden">
+    <div class="settings-view glass">
+      <aside class="settings-sidebar">
+        <div class="sidebar-section">
+          <small>USER SETTINGS</small>
+          <div class="settings-tab active" data-target="section-profile">Profiles</div>
+          <div class="settings-tab" data-target="section-account">My Account</div>
+          <div class="settings-tab" data-target="section-privacy">Privacy & Safety</div>
+        </div>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section">
+          <small>APP SETTINGS</small>
+          <div class="settings-tab" data-target="section-advanced">Advanced</div>
+          <div class="settings-tab btn-danger" id="panic-btn-modal">PANIC (Clear All)</div>
+        </div>
+      </aside>
+
+      <main class="settings-content-area">
+        <div class="content-scroller">
+
+          <section id="section-profile" class="settings-section">
+            <h2>Profiles</h2>
+            <div class="profile-redesign">
+              <div class="profile-config">
+                <label class="setting-item-label">User Profile</label>
+                <div class="profile-inputs-cloaks">
+                  <div class="input-field">
+                    <label>DISPLAY NAME</label>
+                    <input type="text" id="profile-name" placeholder="Anonymous">
+                  </div>
+                  <div class="input-field">
+                    <label>PRONOUNS</label>
+                    <input type="text" id="profile-pronouns" placeholder="he/him">
+                  </div>
+                  <button id="change-avatar-btn" class="cloaks-btn-primary">Change Avatar</button>
+                  <input type="file" id="profile-photo-input" hidden accept="image/*">
+                </div>
+              </div>
+
+              <div class="profile-preview">
+                <label class="setting-item-label">PREVIEW</label>
+                <div class="cloaks-card-preview" id="profile-card-preview-bg">
+                  <div class="banner-color"></div>
+                  <div class="preview-avatar-wrap">
+                    <img id="profile-avatar-preview" src="./icons/logo_matrix_v2.png" alt="Avatar">
+                    <div class="preview-status-dot social"></div>
+                  </div>
+                  <div class="preview-info-box">
+                    <div class="preview-name-wrap">
+                      <span id="preview-name-val">Anonymous</span>
+                      <span id="preview-tag-val">#0000</span>
+                    </div>
+                    <div class="preview-pronouns" id="preview-pronouns-val">he/him</div>
+                    <div class="preview-divider"></div>
+                    <div class="preview-section">
+                      <label>CLOAK MEMBER SINCE</label>
+                      <span>Feb 2026</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="section-account" class="settings-section hidden">
+            <h2>My Account</h2>
+            <div class="settings-group-modern">
+              <label>PRESENCE SETTINGS</label>
+              <div class="setting-card">
+                <div class="card-row">
+                  <div class="row-info">
+                    <h4>Game Activity</h4>
+                    <p>Custom status shown in the member list.</p>
+                  </div>
+                  <input type="text" id="game-activity" placeholder="e.g. In The Matrix" class="cloaks-input-subtle">
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="section-privacy" class="settings-section hidden">
+            <h2>Privacy & Safety</h2>
+            <div class="settings-group-modern">
+              <div class="setting-card">
+                <div class="card-row">
+                  <div class="row-info">
+                    <h4 id="privacy-mode-label">Social Mode</h4>
+                    <p>Allow others to see your profile and presence.</p>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="privacy-toggle" checked>
+                    <span class="slider round"></span>
+                  </label>
+                </div>
+                <div class="card-row">
+                  <button id="export-identity-btn" class="cloaks-btn-outline">Export Identity (JSON)</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="section-advanced" class="settings-section hidden">
+            <h2>Advanced Settings</h2>
+            <div class="settings-group-modern">
+              <div class="setting-card">
+                <div class="card-row-vertical">
+                  <label>STUN SERVER</label>
+                  <select id="stun-select" class="cloaks-select">
+                    <option value="google">Google (Default) - Max Speed</option>
+                    <option value="cloudflare">Cloudflare - Speed & Privacy</option>
+                    <option value="mozilla">Mozilla - Privacy Focused</option>
+                    <option value="twilio">Twilio - Reliability</option>
+                    <option value="none">None - Local Network Only</option>
+                    <option value="custom">Custom (Manual)</option>
+                  </select>
+                  <input type="text" id="custom-stun-input" placeholder="stun:your.server.com:3478"
+                    class="cloaks-input-subtle mt-10 hidden">
+                </div>
+                <div class="card-row-vertical mt-20">
+                  <label>FILE SIZE LIMIT</label>
+                  <select id="filesize-select" class="cloaks-select">
+                    <option value="0">No Limit</option>
+                    <option value="10">10 MB</option>
+                    <option value="50">50 MB</option>
+                    <option value="100">100 MB</option>
+                    <option value="500">500 MB</option>
+                    <option value="1024">1 GB</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+        <button id="close-settings-modal" class="settings-close-btn">&times;</button>
+        <div class="settings-save-bar" id="settings-save-bar">
+          <span>Careful — you have unsaved changes!</span>
+          <div class="save-bar-actions">
+            <button id="reset-settings-btn" class="btn-link">Reset</button>
+            <button id="save-settings-btn" class="cloaks-btn-success">Save Changes</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="community-settings-modal" class="modal hidden">
+    <div class="modal-content glass">
+      <div class="modal-header">
+        <h3>COMMUNITY SETTINGS</h3>
+        <span id="close-community-settings" class="close-btn">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="setting-group">
+          <label>COMMUNITY ICON</label>
+          <div class="profile-redesign no-aside" style="margin-bottom: 20px;">
+            <div class="profile-config">
+              <div class="preview-avatar-wrap" style="margin-bottom: 10px;">
+                <img id="edit-community-icon-preview" src="./icons/logo_matrix_v2.png" alt="Community Icon"
+                  style="width: 80px; height: 80px; border-radius: 15px; border: 2px solid var(--accent);">
+              </div>
+              <button id="btn-change-community-icon" class="cloaks-btn-primary">Change Icon</button>
+              <input type="file" id="community-icon-input" hidden accept="image/*">
+            </div>
+          </div>
+
+          <label>CLOAK NAME</label>
+          <input type="text" id="edit-community-name" class="cloaks-input" placeholder="Community Name">
+        </div>
+
+        <div class="setting-group mt-20">
+          <label>CHANNELS</label>
+          <div id="edit-channels-list" class="edit-channels-scroll">
+          </div>
+          <button id="btn-add-channel-trigger" class="cloaks-btn-outline mt-10">+ Add New Channel</button>
+        </div>
+
+        <div id="add-channel-form" class="hidden mt-20 p-10 border-accent">
+          <label>CHANNEL TYPE</label>
+          <select id="new-channel-type" class="cloaks-select mb-5">
+            <option value="text"># Text Channel</option>
+            <option value="voice"> #Voice Channel</option>
+            <option value="resource"> #Resource</option>
+          </select>
+          <label>CHANNEL NAME</label>
+          <input type="text" id="new-channel-name" class="cloaks-input" placeholder="e.g. support">
+          <div class="flex-row gap-10">
+            <button id="confirm-add-channel" class="cloaks-btn-success">Add</button>
+            <button id="cancel-add-channel" class="cloaks-btn-outline">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer mt-20">
+        <button id="save-community-settings" class="cloaks-btn-primary">Save & Apply Changes</button>
+        <button id="export-community-btn" class="cloaks-btn-outline mt-20" style="width: 100%;">Download Updated
+          Cloak
+          File</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="protocol-assets" class="hidden">
+    <div id="videoContainer" class="video-overlay hidden">
+      <div class="video-wrapper">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay playsinline muted class="self-video"></video>
+        <div class="video-controls-cloaks">
+          <button id="btnToggleAudio" class="ctrl-btn">🎤</button>
+          <button id="btnToggleVideo" class="ctrl-btn">📹</button>
+          <button id="btnStopVideo" class="ctrl-btn hangup">📞</button>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="fileInput" hidden />
+  </div>
+
+  <div id="incoming-call-modal" class="modal hidden">
+    <div class="incoming-call-box glass">
+      <div class="call-animation">
+        <div class="ring-circle"></div>
+        <img id="caller-avatar" src="./icons/logo_matrix_v2.png" alt="Caller">
+      </div>
+      <h3 id="caller-name">Incoming Call...</h3>
+      <p id="call-type">Voice Call</p>
+      <div class="call-actions">
+        <button id="btn-decline-call" class="ctrl-btn hangup">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+            <path
+              d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.15-2.67 1.95-.3.3-.7.42-1.1.42-.4 0-.78-.13-1.05-.39L.41 14.1c-.27-.27-.41-.61-.41-.97 0-.36.14-.7.41-.97C3.03 9.53 7.31 7 12 7s8.97 2.53 11.59 5.17c.27.27.41.61.41.97s-.14.7-.41.97l-1.6 1.61c-.27.27-.64.39-1.05.39-.41 0-.8-.12-1.1-.42-.8-.8-1.69-1.47-2.67-1.95-.33-.16-.56-.51-.56-.9V9.72c-1.45-.47-3-.72-4.6-.72z" />
+          </svg>
+        </button>
+        <button id="btn-accept-call" class="ctrl-btn accept">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+            <path
+              d="M20 15.5c-1.2 0-2.4-.2-3.6-.6-.3-.1-.7 0-1 .3l-2.2 2.2c-2.8-1.4-5.1-3.8-6.6-6.6l2.2-2.2c.3-.3.4-.7.2-1C8.5 6.4 8.3 5.2 8.3 4c0-.6-.4-1-1-1H4c-.6 0-1 .4-1 1 0 9.4 7.6 17 17 17 .6 0 1-.4 1-1v-3.5c0-.6-.4-1-1-1zM19 12h2c0-4.8-3.5-8.8-8-9.8v2.1c2.9.9 5.1 3.5 5.9 6.7.1.3.1.6.1 1z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <nav class="mobile-navbar">
+    <div class="nav-item active" id="nav-home">
+      <img src="./icons/logo_matrix_v2.png" alt="Home" style="width: 24px; height: 24px; border-radius: 4px;">
+      <span class="nav-label">Home</span>
+    </div>
+    <div class="nav-item" id="nav-communities">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+      </svg>
+      <span class="nav-label">Cloaks</span>
+    </div>
+    <div class="nav-item" id="nav-members">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+      </svg>
+      <span class="nav-label">Members</span>
+    </div>
+    <div class="nav-item" id="nav-settings">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+      </svg>
+      <span class="nav-label">Settings</span>
+    </div>
+  </nav>
+
+  <script src="./js/config.js"></script>
+  <script src="js/dictionary.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/opfs.js"></script>
+  <script src="js/commands.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/file-transfer.js"></script>
+  <script src="js/signaling.js"></script>
+  <script src="js/webrtc.js"></script>
+  <script src="js/community.js"></script>
+  <script src="js/presence.js"></script>
+  <script src="js/identity.js"></script>
+  <script src="js/main.js" defer></script>
+
+</body>
+
+</html>

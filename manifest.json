@@ -1,0 +1,27 @@
+{
+  "name": "Cloaks P2P",
+  "short_name": "Cloaks",
+  "description": "Sovereign P2P Communication & File Transfer",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00d937",
+  "icons": [
+    {
+      "src": "./icons/logo_matrix_v2.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/logo_matrix_v2.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/logo_matrix_v2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
