@@ -1,4 +1,14 @@
 window.Cudi.ui = {
+    escapeHTML(str) {
+        if (!str) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    },
+
     init() {
         if (window.Cudi && window.Cudi.state) {
             window.Cudi.state.peers = window.Cudi.state.peers || new Map();
@@ -300,7 +310,6 @@ window.Cudi.ui = {
                 sidebar.appendChild(item);
             }
         } catch {
-            // Error safety
             sidebar.innerHTML = '<div class="empty-state-msg">Error loading conversations</div>';
         }
     },
@@ -458,9 +467,6 @@ window.Cudi.ui = {
         const messagesDisplay = document.getElementById("messagesDisplay");
         if (!messagesDisplay) return;
 
-        const item = document.createElement("div");
-        item.className = `message-item ${type}`;
-
         let avatarSrc = "./icons/logo_matrix_v2.png";
         if (type === "sent") {
             avatarSrc = document.getElementById('user-avatar-small')?.src || "./icons/logo_matrix_v2.png";
@@ -471,39 +477,23 @@ window.Cudi.ui = {
             if (peer && peer.photo) avatarSrc = peer.photo;
         }
 
-        const avatar = document.createElement("img");
-        avatar.className = "msg-avatar";
-        avatar.src = avatarSrc;
+        const author = this.escapeHTML(alias || ((type === "sent") ? "You" : "Guest"));
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const safeMessage = this.escapeHTML(message);
 
-        const content = document.createElement("div");
-        content.className = "msg-content";
-
-        const header = document.createElement("div");
-        header.className = "msg-header";
-
-        const author = document.createElement("span");
-        author.className = "msg-author";
-        author.textContent = alias || ((type === "sent") ? "You" : "Guest");
-
-        const time = document.createElement("span");
-        time.className = "msg-time";
-        const now = new Date();
-        time.textContent = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-        header.appendChild(author);
-        header.appendChild(time);
-
-        const text = document.createElement("div");
-        text.className = "msg-text";
-        text.innerHTML = message;
-
-        content.appendChild(header);
-        content.appendChild(text);
-
-        item.appendChild(avatar);
-        item.appendChild(content);
-
-        messagesDisplay.appendChild(item);
+        const html = `
+            <div class="message-item ${type}">
+                <img class="msg-avatar" src="${avatarSrc}">
+                <div class="msg-content">
+                    <div class="msg-header">
+                        <span class="msg-author">${author}</span>
+                        <span class="msg-time">${time}</span>
+                    </div>
+                    <div class="msg-text">${safeMessage}</div>
+                </div>
+            </div>
+        `;
+        messagesDisplay.insertAdjacentHTML('beforeend', html);
         messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
     },
 
@@ -511,115 +501,54 @@ window.Cudi.ui = {
         const messagesDisplay = document.getElementById("messagesDisplay");
         if (!messagesDisplay) return;
 
-        const item = document.createElement("div");
-        item.className = `message-item ${type}`;
-        item.dataset.filename = filename;
-        item.dataset.type = type;
-
-        const avatar = document.createElement("img");
-        avatar.className = "msg-avatar";
-        avatar.src = (type === "sent") ? (document.getElementById('user-avatar-small')?.src || "./icons/logo_matrix_v2.png") : "./icons/logo_matrix_v2.png";
-
-        const content = document.createElement("div");
-        content.className = "msg-content";
-
-        const header = document.createElement("div");
-        header.className = "msg-header";
-
-        const author = document.createElement("span");
-        author.className = "msg-author";
-        author.textContent = alias || ((type === "sent") ? "You" : "Guest");
-
-        const time = document.createElement("span");
-        time.className = "msg-time";
-        const now = new Date();
-        time.textContent = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-        header.appendChild(author);
-        header.appendChild(time);
-
-        const wrapper = document.createElement("div");
-        wrapper.className = "media-wrapper";
-        wrapper.style.backgroundColor = "rgba(0,0,0,0.2)";
-        wrapper.style.padding = "10px";
-        wrapper.style.borderRadius = "8px";
-        wrapper.style.marginTop = "6px";
-        wrapper.style.border = verified ? "1px solid var(--accent)" : "1px solid rgba(255,255,255,0.1)";
-        wrapper.style.maxWidth = "min(400px, 100%)";
-        wrapper.style.transition = "border-color 0.3s ease";
-
+        const avatarSrc = (type === "sent") ? (document.getElementById('user-avatar-small')?.src || "./icons/logo_matrix_v2.png") : "./icons/logo_matrix_v2.png";
+        const author = this.escapeHTML(alias || ((type === "sent") ? "You" : "Guest"));
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const safeFilename = this.escapeHTML(filename);
+        
         const extension = filename.split('.').pop().toLowerCase();
         const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension);
         const isPDF = extension === 'pdf';
-
+        
+        let mediaPreview = '';
         if (isImage) {
-            const img = document.createElement("img");
-            img.src = url;
-            img.style.maxWidth = "100%";
-            img.style.maxHeight = "300px";
-            img.style.borderRadius = "4px";
-            img.style.display = "block";
-            img.style.marginBottom = "10px";
-            img.style.cursor = "pointer";
-            img.onclick = () => window.open(url, '_blank');
-            wrapper.appendChild(img);
+            mediaPreview = `<img src="${url}" style="max-width: 100%; max-height: 300px; border-radius: 4px; display: block; margin-bottom: 10px; cursor: pointer;" onclick="window.open('${url}', '_blank')">`;
         } else if (isPDF) {
-            const iframe = document.createElement("iframe");
-            iframe.src = url;
-            iframe.style.width = "100%";
-            iframe.style.height = "250px";
-            iframe.style.border = "none";
-            iframe.style.borderRadius = "4px";
-            iframe.style.marginBottom = "10px";
-            wrapper.appendChild(iframe);
+            mediaPreview = `<iframe src="${url}" style="width: 100%; height: 250px; border: none; border-radius: 4px; margin-bottom: 10px;"></iframe>`;
         }
 
-        const fileMeta = document.createElement("div");
-        fileMeta.style.display = "flex";
-        fileMeta.style.alignItems = "center";
-        fileMeta.style.justifyContent = "space-between";
-        fileMeta.style.gap = "12px";
+        const tickSvg = verified ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="var(--accent)" class="verified-tick" style="margin-right: 8px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>` : '';
+        const dlBtnHTML = url !== '#' ? 
+            `<button class="cloaks-btn-primary" style="padding: 4px 12px; width: auto; font-size: 0.8rem; display: flex; align-items: center;" onclick="const a = document.createElement('a'); a.href='${url}'; a.download='${safeFilename.replace(/'/g, "\\'")}'; a.click();">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 4px;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Download
+            </button>` : '';
+        const sessionMsg = url === '#' ? `<div style="font-size: 0.75rem; opacity: 0.6; margin-top: 2px;">Session-only preview</div>` : '';
 
-        const fileInfo = document.createElement("div");
-        fileInfo.style.display = "flex";
-        fileInfo.style.alignItems = "center";
-        fileInfo.style.gap = "8px";
-
-        const tickSvg = verified ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="var(--accent)"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>` : '';
-
-        fileInfo.innerHTML = `${tickSvg}<div style="color: var(--text-light); font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">${filename}</div>`;
-
-        const dlBtn = document.createElement("button");
-        dlBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 4px;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Download`;
-        dlBtn.className = "cloaks-btn-primary";
-        dlBtn.style.padding = "4px 12px";
-        dlBtn.style.width = "auto";
-        dlBtn.style.fontSize = "0.8rem";
-        dlBtn.style.display = "flex";
-        dlBtn.style.alignItems = "center";
-        dlBtn.onclick = () => {
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = filename;
-            a.click();
-        };
-
-        if (url === '#') {
-            dlBtn.style.display = "none";
-            fileInfo.innerHTML += `<div style="font-size: 0.75rem; opacity: 0.6; margin-top: 2px;">Session-only preview</div>`;
-        }
-
-        fileMeta.appendChild(fileInfo);
-        fileMeta.appendChild(dlBtn);
-        wrapper.appendChild(fileMeta);
-
-        content.appendChild(header);
-        content.appendChild(wrapper);
-
-        item.appendChild(avatar);
-        item.appendChild(content);
-
-        messagesDisplay.appendChild(item);
+        const html = `
+            <div class="message-item ${type}" data-filename="${safeFilename}" data-type="${type}">
+                <img class="msg-avatar" src="${avatarSrc}">
+                <div class="msg-content">
+                    <div class="msg-header">
+                        <span class="msg-author">${author}</span>
+                        <span class="msg-time">${time}</span>
+                    </div>
+                    <div class="media-wrapper" style="background-color: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-top: 6px; border: ${verified ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.1)'}; max-width: min(400px, 100%); transition: border-color 0.3s ease;">
+                        ${mediaPreview}
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                ${tickSvg}
+                                <div>
+                                    <div style="color: var(--text-light); font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;" title="${safeFilename}">${safeFilename}</div>
+                                    ${sessionMsg}
+                                </div>
+                            </div>
+                            ${dlBtnHTML}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        messagesDisplay.insertAdjacentHTML('beforeend', html);
         messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
     },
 
@@ -646,12 +575,14 @@ window.Cudi.ui = {
         const messagesDisplay = document.getElementById("messagesDisplay");
         if (!messagesDisplay) return;
 
+        const safeFilename = this.escapeHTML(filename);
+
         const container = document.createElement("div");
         container.className = "message-item received";
         container.innerHTML = `
             <div class="msg-content" style="background: var(--bg-input); padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent-cyan);">
                 <strong>📄 Incoming File Request</strong>
-                <div style="font-size: 0.9rem; margin: 5px 0;">${filename} (${(size / 1024 / 1024).toFixed(2)} MB)</div>
+                <div style="font-size: 0.9rem; margin: 5px 0;" title="${safeFilename}">${safeFilename} (${(size / 1024 / 1024).toFixed(2)} MB)</div>
                 <button class="cloaks-btn-primary" id="accept-file-btn"> Save to Disk</button>
             </div>
         `;
@@ -662,7 +593,7 @@ window.Cudi.ui = {
             btn.textContent = "⏳ Initializing...";
             const result = await onAccept();
             if (result) {
-                container.innerHTML = `<div class="msg-content" style="color: var(--status-green)">✅ Starting Download: ${filename}</div>`;
+                container.innerHTML = `<div class="msg-content" style="color: var(--status-green)">✅ Starting Download: ${safeFilename}</div>`;
             } else {
                 btn.disabled = false;
                 btn.textContent = "💾 Save to Disk (Retry)";

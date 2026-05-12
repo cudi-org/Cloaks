@@ -156,21 +156,42 @@ window.Cudi.startFileStreaming = async function () {
             }
         }
 
-        window.Cudi.showToast("File sent successfully!", "success");
+        if (offset >= file.size) {
+            window.Cudi.showToast("File sent successfully!", "success");
 
-        if (window.Cudi.ui?.markFileAsVerified) {
-            window.Cudi.ui.markFileAsVerified(file.name, "sent");
+            if (window.Cudi.ui?.markFileAsVerified) {
+                window.Cudi.ui.markFileAsVerified(file.name, "sent");
+            }
+
+            state.archivoParaEnviar = null;
+            state.isWaitingForTransferStart = false;
+            if (document.getElementById("fileInput")) document.getElementById("fileInput").value = "";
         }
-
-        state.archivoParaEnviar = null;
-        state.isWaitingForTransferStart = false;
-        if (document.getElementById("fileInput")) document.getElementById("fileInput").value = "";
 
     } catch {
         clearInterval(monitorVelocidad);
         window.Cudi.showToast("Error sending file.", "error");
         state.isWaitingForTransferStart = false;
     }
+}
+
+window.Cudi.retryChunk = async function(offset) {
+    const state = window.Cudi.state;
+    const file = state.archivoParaEnviar;
+    if (!file) return;
+    const peerId = state.currentPeerId;
+    const instance = state.activeChats.get(peerId);
+    const dc = instance ? instance.dc : null;
+    if (!dc || dc.readyState !== 'open') return;
+
+    const CHUNK_SIZE = 32 * 1024;
+    const slice = file.slice(offset, offset + CHUNK_SIZE);
+    const chunkBuffer = await slice.arrayBuffer();
+    const chunkHash = await crypto.subtle.digest('SHA-256', chunkBuffer);
+    const packet = new Uint8Array(32 + chunkBuffer.byteLength);
+    packet.set(new Uint8Array(chunkHash), 0);
+    packet.set(new Uint8Array(chunkBuffer), 32);
+    dc.send(packet);
 }
 
 window.Cudi.processBuffer = async function (data) {
@@ -189,13 +210,12 @@ window.Cudi.processBuffer = async function (data) {
         try {
             const calculatedHash = await crypto.subtle.digest('SHA-256', dataContent);
             if (!compareBuffers(receivedHash, calculatedHash)) {
-                window.Cudi.showToast(" Transmission Error: Chunk Corrupted. Aborting.", "error");
-                state.tamañoArchivoEsperado = 0;
-
-                if (state.fileWritable) {
-                    await state.fileWritable.abort();
-                    state.fileWritable = null;
-                    state.fileHandle = null;
+                window.Cudi.showToast(" Transmission Error: Chunk Corrupted. Retrying...", "warning");
+                const peerId = state.currentPeerId;
+                const instance = state.activeChats.get(peerId);
+                const dc = instance ? instance.dc : state.dataChannel;
+                if (dc) {
+                    dc.send(JSON.stringify({ type: "retry_chunk", offset: state.bytesReceived || 0 }));
                 }
                 return;
             }

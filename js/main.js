@@ -1,10 +1,36 @@
+import './config.js';
+import './dictionary.js';
+import './state.js';
+import './opfs.js';
+import './commands.js';
+import './utils.js';
+import './ui.js';
+import './file-transfer.js';
+import './signaling.js';
+import './webrtc.js';
+import './community.js';
+import './presence.js';
+import './identity.js';
+
+import { globalStore } from './Store.js';
+import { WebRTCManager } from './WebRTCManager.js';
+
 window.Cudi = window.Cudi || {};
-window.currentSettings = window.Cudi.LOADED_SETTINGS;
+window.Cudi.store = globalStore;
+window.Cudi.state = globalStore.getState();
+
+globalStore.subscribe((newState) => {
+    window.Cudi.state = newState;
+});
+
+window.Cudi.webRTCManager = new WebRTCManager(globalStore, window.Cudi, window.Cudi.ui);
+
+
+window.currentSettings = window.Cudi.LOADED_SETTINGS || {};
 window.onerror = function () {
     return false;
 };
 window.onunhandledrejection = function () {
-    // Silent generic unhandled error
 };
 const salaStatus = document.getElementById("salaStatus");
 const chatInput = document.getElementById("chatInput");
@@ -66,7 +92,7 @@ function crearSala() {
     if (salaStatus) {
         salaStatus.innerHTML = window.Cudi.state.salaId;
         if (password) {
-            salaStatus.innerHTML += " (🔒)";
+            salaStatus.innerHTML += " ()";
         }
     }
     const copyLinkBtn = document.getElementById("copy-link-btn");
@@ -525,7 +551,7 @@ if (btnFullscreen) {
     btnFullscreen.addEventListener("click", () => {
         const videoContainer = document.getElementById("videoContainer");
         if (!document.fullscreenElement) {
-            videoContainer.requestFullscreen().catch(() => { /* fullscreen request denied or failed */ });
+            videoContainer.requestFullscreen().catch(() => { });
         } else {
             document.exitFullscreen();
         }

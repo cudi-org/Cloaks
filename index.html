@@ -479,6 +479,12 @@
                     class="cloaks-input-subtle mt-10 hidden">
                 </div>
                 <div class="card-row-vertical mt-20">
+                  <label>SIGNALING SERVER</label>
+                  <input type="text" id="signaling-server-input" placeholder="wss://cloaks-signalin.onrender.com"
+                    class="cloaks-input-subtle" value="wss://cloaks-signalin.onrender.com">
+                  <p style="font-size: 11px; opacity: 0.6; margin-top: 5px;">Set your own websocket server for true sovereignty.</p>
+                </div>
+                <div class="card-row-vertical mt-20">
                   <label>FILE SIZE LIMIT</label>
                   <select id="filesize-select" class="cloaks-select">
                     <option value="0">No Limit</option>
@@ -630,20 +636,7 @@
     </div>
   </nav>
 
-  <script src="./js/config.js"></script>
-  <script src="js/dictionary.js"></script>
-  <script src="js/state.js"></script>
-  <script src="js/opfs.js"></script>
-  <script src="js/commands.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/file-transfer.js"></script>
-  <script src="js/signaling.js"></script>
-  <script src="js/webrtc.js"></script>
-  <script src="js/community.js"></script>
-  <script src="js/presence.js"></script>
-  <script src="js/identity.js"></script>
-  <script src="js/main.js" defer></script>
+  <script type="module" src="js/main.js"></script>
 
 </body>
 

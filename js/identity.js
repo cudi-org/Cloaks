@@ -201,12 +201,21 @@ const identityManager = {
                 const stunSelect = document.getElementById('stun-select');
                 const filesizeSelect = document.getElementById('filesize-select');
                 const customStunInput = document.getElementById('custom-stun-input');
+                const signalingInput = document.getElementById('signaling-server-input');
 
-                if (window.saveSettings) {
+                if (window.Cudi && window.Cudi.saveSettings) {
+                    window.Cudi.saveSettings({
+                        stun: stunSelect ? stunSelect.value : 'google',
+                        customStun: (customStunInput && stunSelect.value === 'custom') ? customStunInput.value.trim() : "",
+                        maxFileSize: filesizeSelect ? filesizeSelect.value : '0',
+                        signalingServer: signalingInput ? signalingInput.value.trim() : 'wss://cloaks-signalin.onrender.com'
+                    });
+                } else if (window.saveSettings) {
                     window.saveSettings({
                         stun: stunSelect ? stunSelect.value : 'google',
                         customStun: (customStunInput && stunSelect.value === 'custom') ? customStunInput.value.trim() : "",
-                        maxFileSize: filesizeSelect ? filesizeSelect.value : '0'
+                        maxFileSize: filesizeSelect ? filesizeSelect.value : '0',
+                        signalingServer: signalingInput ? signalingInput.value.trim() : 'wss://cloaks-signalin.onrender.com'
                     });
                 }
 
@@ -253,6 +262,6 @@ const identityManager = {
 window.identityManager = identityManager;
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof window !== 'undefined') {
-        identityManager.init().catch(() => { /* identity initialization handled */ });
+        identityManager.init().catch(() => { });
     }
 });

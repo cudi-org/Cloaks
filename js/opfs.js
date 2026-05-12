@@ -11,7 +11,7 @@ window.Cudi = window.Cudi || {};
             return await navigator.storage.getDirectory();
         },
 
-        async loadHistory(peerId) {
+        async loadHistory(peerId, offset = 0, limit = 50) {
             if (!peerId || peerId === 'state') return [];
             const root = await this.getDirectory();
             if (!root) return [];
@@ -32,9 +32,16 @@ window.Cudi = window.Cudi || {};
                 const file = await fileHandle.getFile();
                 const text = await file.text();
 
-                const data = text ? JSON.parse(text) : [];
+                if (!text) return [];
 
-                return Array.isArray(data) ? data : [];
+                if (text.trim().startsWith('[')) {
+                    const data = JSON.parse(text);
+                    return data.slice(Math.max(0, data.length - offset - limit), data.length - offset);
+                } else {
+                    const lines = text.split('\n').filter(l => l.trim());
+                    const messages = lines.map(l => JSON.parse(l));
+                    return messages.slice(Math.max(0, messages.length - offset - limit), messages.length - offset);
+                }
             } catch {
                 return [];
             }
@@ -58,15 +65,12 @@ window.Cudi = window.Cudi || {};
 
                 const fileName = `chat_${peerId}.json`;
                 const fileHandle = await root.getFileHandle(fileName, { create: true });
+                const file = await fileHandle.getFile();
 
-                const history = await this.loadHistory(peerId);
-                history.push(msg);
-
-                const writable = await fileHandle.createWritable();
-                await writable.write(JSON.stringify(history));
+                const writable = await fileHandle.createWritable({ keepExistingData: true });
+                await writable.write({ type: 'write', data: JSON.stringify(msg) + '\n', position: file.size });
                 await writable.close();
             } catch {
-                // Ignore write fail
             } finally {
                 isWriting = false;
             }
@@ -92,7 +96,6 @@ window.Cudi = window.Cudi || {};
                 entries.sort((a, b) => b.lastModified - a.lastModified);
                 return entries.map(e => e.peerId);
             } catch {
-                // Ignore entries
             }
             return chats;
         },
@@ -116,7 +119,6 @@ window.Cudi = window.Cudi || {};
                 await writable.write(JSON.stringify(cache));
                 await writable.close();
             } catch {
-                // Ignore metadata error
             }
         },
 
@@ -187,7 +189,6 @@ window.Cudi = window.Cudi || {};
                     }
                 }
             } catch {
-                // Ignore clear fail
             }
         }
     };

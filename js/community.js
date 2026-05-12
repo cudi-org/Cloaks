@@ -132,30 +132,38 @@ const communityManager = {
         const name = prompt("Community Name:", "New Cloak");
         if (!name) return;
 
+        const password = prompt("Set a password to encrypt this Cloak:", "super-secret");
+        if (!password) return;
+
         const community = {
             version: "1.0",
             type: "cloak-community",
             community_id: crypto.randomUUID(),
             name: name,
             created_at: new Date().toISOString(),
-            encryption_key: await this.generateKey(),
+            salt: Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join(''),
             channels: [
                 { id: "general", name: "general", type: "text", immutable: true },
                 { id: "voice-general", name: "general", type: "voice", immutable: true }
             ],
             peer_cache: []
         };
+        community.encryption_key = await this.deriveKey(password, community.salt);
 
         this.currentCommunity = community;
         this.downloadCommunityFile(community);
         this.activateCommunity(community);
     },
 
-    async generateKey() {
-        const key = await crypto.subtle.generateKey(
-            { name: "AES-GCM", length: 256 },
-            true,
-            ["encrypt", "decrypt"]
+    async deriveKey(password, saltHex) {
+        const encoder = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey(
+            "raw", encoder.encode(password), { name: "PBKDF2" }, false, ["deriveBits", "deriveKey"]
+        );
+        const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+        const key = await crypto.subtle.deriveKey(
+            { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+            keyMaterial, { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
         );
         const exported = await crypto.subtle.exportKey("jwk", key);
         return exported.k;
@@ -163,10 +171,19 @@ const communityManager = {
 
     loadCommunityFromFile(file) {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const community = JSON.parse(e.target.result);
                 if (community.type === 'cloak-community') {
+                    if (community.salt) {
+                        const password = prompt("Enter Cloak password:", "");
+                        if (!password) return;
+                        const derivedKey = await this.deriveKey(password, community.salt);
+                        if (derivedKey !== community.encryption_key) {
+                            showToast("Incorrect password", "error");
+                            return;
+                        }
+                    }
                     this.activateCommunity(community);
                     showToast(`Connected to ${community.name}`, 'success');
                 } else {
@@ -500,7 +517,6 @@ const communityManager = {
             await writable.write({ type: 'write', data: JSON.stringify(message) + '\n', position: size });
             await writable.close();
         } catch {
-            // Ignorar errores de guardado
         }
     },
 
@@ -518,7 +534,6 @@ const communityManager = {
                 }
             });
         } catch {
-            // Ignorar errores de carga
         }
     },
 

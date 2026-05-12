@@ -1,10 +1,12 @@
 
 
 window.Cudi.iniciarHandshakeWebRTC = function (targetId) {
+    if (window.Cudi.webRTCManager) return window.Cudi.webRTCManager.crearPeer(true, targetId);
     return window.Cudi.crearPeer(true, targetId);
 };
 
 window.Cudi.handleOffer = function (mensaje) {
+    if (window.Cudi.webRTCManager) return window.Cudi.webRTCManager.handleOffer(mensaje);
     const state = window.Cudi.state;
     const fromId = mensaje.fromPeerId;
 
@@ -30,11 +32,11 @@ window.Cudi.handleOffer = function (mensaje) {
             });
         })
         .catch(() => {
-            // Silence silent errors
         });
 };
 
 window.Cudi.crearPeer = function (isOffer, targetId = null) {
+    if (window.Cudi.webRTCManager) return window.Cudi.webRTCManager.crearPeer(isOffer, targetId);
     const state = window.Cudi.state;
     if (!state) return;
 
@@ -52,13 +54,12 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
         }
 
         try { existing.pc.close(); } catch {
-            // Ignore potential close error
         }
         state.activeChats.delete(targetId);
     }
 
     const currentStun = window.currentSettings?.stun || "google";
-    const dynamicIceServers = window.Cudi.STUN_SERVERS_MAP[currentStun] || window.Cudi.STUN_SERVERS_MAP["google"];
+    const dynamicIceServers = window.Cudi.STUN_SERVERS_MAP ? (window.Cudi.STUN_SERVERS_MAP[currentStun] || window.Cudi.STUN_SERVERS_MAP["google"]) : [{ urls: "stun:stun.l.google.com:19302" }];
 
     const pc = new RTCPeerConnection({ iceServers: dynamicIceServers });
     const chatInstance = {
@@ -85,6 +86,8 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
         if (pc.connectionState === "connected") {
             window.Cudi.showToast(`Connected to ${targetId}`, "success");
             document.getElementById('meeting-tools')?.classList.add('hidden');
+
+            if (window.Cudi.webRTCManager) window.Cudi.webRTCManager.optimizeForMesh();
         }
         if (pc.connectionState === "closed" || pc.connectionState === "failed") {
             state.activeChats.delete(targetId);
@@ -101,8 +104,10 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
         } else if (event.track.kind === 'audio') {
             const audio = new Audio();
             audio.srcObject = event.streams[0];
-            audio.play().catch(() => { /* silent fail */ });
+            audio.play().catch(() => { });
         }
+
+        if (window.Cudi.webRTCManager) window.Cudi.webRTCManager.optimizeForMesh();
     };
 
     pc.ondatachannel = (event) => {
@@ -129,7 +134,6 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
                 });
             })
             .catch(() => {
-                // Ignore silent errors
             });
     }
 
@@ -206,7 +210,6 @@ window.Cudi.setupDataChannel = function (channel, peerId) {
                 return;
             }
         } catch {
-            // Message format not recognized
         }
 
         manejarChunk(event.data, peerId);
@@ -346,7 +349,7 @@ window.Cudi.manejarMensaje = function (mensaje) {
     }
 }
 
-function manejarChunk(data, peerId) {
+async function manejarChunk(data, peerId) {
     const state = window.Cudi.state;
     if (typeof data === "string") {
         try {
@@ -376,10 +379,21 @@ function manejarChunk(data, peerId) {
                 state.bytesReceived = 0;
                 state.lastLoggedPercent = 0;
 
-                const AUTO_ACCEPT_THRESHOLD = 20 * 1024 * 1024;
+                const RAM_LIMIT = 50 * 1024 * 1024;
 
-                if (msg.tamaño <= AUTO_ACCEPT_THRESHOLD) {
-                    if (dc) dc.send(JSON.stringify({ type: "start_transfer" }));
+                if (msg.tamaño > RAM_LIMIT) {
+                    if (window.showSaveFilePicker) {
+                        try {
+                            const handle = await window.showSaveFilePicker({ suggestedName: msg.nombre });
+                            state.fileHandle = handle;
+                            state.fileWritable = await handle.createWritable();
+                            if (dc) dc.send(JSON.stringify({ type: "start_transfer" }));
+                        } catch {
+                            window.Cudi.showToast("File too large. Save location required.", "error");
+                        }
+                    } else {
+                        window.Cudi.showToast("Browser does not support saving large files directly to disk.", "error");
+                    }
                 } else if (window.Cudi.displayIncomingFileRequest) {
                     window.Cudi.displayIncomingFileRequest(msg.nombre, msg.tamaño, async () => {
                         if (window.showSaveFilePicker) {
@@ -400,6 +414,8 @@ function manejarChunk(data, peerId) {
 
             } else if (msg.type === "start_transfer") {
                 if (window.Cudi.startFileStreaming) window.Cudi.startFileStreaming();
+            } else if (msg.type === "retry_chunk") {
+                if (window.Cudi.retryChunk) window.Cudi.retryChunk(msg.offset);
             } else if (msg.type === "chat") {
                 const formattedMsg = {
                     type: msg.subType || "text",
@@ -415,7 +431,6 @@ function manejarChunk(data, peerId) {
 
 
         } catch {
-            // Silent catch
         }
     } else {
         if (data instanceof Blob) {
@@ -444,7 +459,6 @@ window.Cudi.renegotiate = async function (targetPeerId = null) {
                 targetPeerId: peerId
             });
         } catch {
-            // Negotiation failed silently
         }
     };
 
@@ -453,7 +467,6 @@ window.Cudi.renegotiate = async function (targetPeerId = null) {
     } else if (state.currentPeerId) {
         await doRenegotiate(state.currentPeerId, state.activeChats.get(state.currentPeerId));
     } else {
-        // No current peer or target
     }
 };
 
@@ -591,7 +604,6 @@ window.Cudi.stopVoiceOnly = function () {
                 const sender = senders.find(s => s.track === track);
                 if (sender) {
                     try { pc.removeTrack(sender); } catch {
-                        // Channel might be closed
                     }
                 }
             }
@@ -614,7 +626,6 @@ window.Cudi.stopVideo = function () {
                 const sender = senders.find(s => s.track === track);
                 if (sender) {
                     try { pc.removeTrack(sender); } catch {
-                        // Track removal failed or Peer connection closed
                     }
                 }
             }
@@ -665,7 +676,7 @@ window.Cudi.startScreenShare = async function () {
                 if (sender) sender.replaceTrack(camTrack);
                 document.getElementById('localVideo').srcObject = window.Cudi.localStream;
             } else {
-                if (sender) try { state.peer.removeTrack(sender); } catch { /* channel closed */ }
+                if (sender) try { state.peer.removeTrack(sender); } catch { }
                 window.Cudi.stopVideo();
                 window.Cudi.renegotiate();
             }

@@ -30,7 +30,6 @@ try {
     const saved = localStorage.getItem("cudi_settings");
     if (saved) loaded = JSON.parse(saved);
 } catch {
-    // Ignore invalid JSON
 }
 window.Cudi.LOADED_SETTINGS = loaded;
 
@@ -57,9 +56,8 @@ window.Cudi.ICE_SERVERS = (typeof CONFIG !== 'undefined' && CONFIG.ICE_SERVERS)
 window.Cudi.appType = "cudi-messenger";
 window.Cudi.CHUNK_SIZE = 16 * 1024;
 
-window.Cudi.SIGNALING_SERVER_URL = (typeof CONFIG !== 'undefined' && CONFIG.SIGNALING_SERVER_URL)
-    ? CONFIG.SIGNALING_SERVER_URL
-    : 'wss://cloaks-signalin.onrender.com';
+window.Cudi.SIGNALING_SERVER_URL = window.Cudi.LOADED_SETTINGS.signalingServer || 
+    ((typeof CONFIG !== 'undefined' && CONFIG.SIGNALING_SERVER_URL) ? CONFIG.SIGNALING_SERVER_URL : 'wss://cloaks-signalin.onrender.com');
 
 window.Cudi.savePeerToken = function (token) {
     window.Cudi.state.peerToken = token;
