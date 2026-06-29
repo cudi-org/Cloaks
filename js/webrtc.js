@@ -11,9 +11,15 @@ window.Cudi.handleOffer = function (mensaje) {
     const fromId = mensaje.fromPeerId;
 
     let instance = state.activeChats.get(fromId);
-    if (!instance) {
-        instance = window.Cudi.crearPeer(false, fromId);
+    if (instance) {
+        try { instance.pc.close(); } catch {
+            // Ignore error on close
+        }
+        state.activeChats.delete(fromId);
+        window.Cudi.store.setState({ activeChats: state.activeChats });
     }
+
+    instance = window.Cudi.crearPeer(false, fromId);
     const pc = instance.pc;
     const sdp = mensaje.oferta || mensaje.offer;
 
@@ -180,7 +186,7 @@ window.Cudi.setupDataChannel = function (channel, peerId) {
         }
 
         if (!state.currentPeerId && window.Cudi.appType === 'cloaks') {
-            state.currentPeerId = peerId;
+            window.Cudi.store.setState({ currentPeerId: peerId });
         }
 
         const chatInput = document.getElementById("chatInput");
@@ -246,8 +252,8 @@ window.Cudi.manejarMensaje = function (mensaje) {
                 if (window.Cudi.appType === 'cloaks' && !state.currentPeerId && mensaje.peers.length > 0) {
                     const firstPeer = mensaje.peers[0];
                     const firstPeerId = firstPeer.permanentId || firstPeer.id;
-                    state.currentPeerId = firstPeerId;
-                    if (window.Cudi.ui) window.Cudi.ui.updateChatHeader(state.currentPeerId);
+                    window.Cudi.store.setState({ currentPeerId: firstPeerId });
+                    if (window.Cudi.ui) window.Cudi.ui.updateChatHeader(firstPeerId);
                 }
             }
 
@@ -276,7 +282,7 @@ window.Cudi.manejarMensaje = function (mensaje) {
             }
 
             if (window.Cudi.appType === 'cloaks' && !state.currentPeerId) {
-                state.currentPeerId = realId;
+                window.Cudi.store.setState({ currentPeerId: realId });
                 if (window.Cudi.ui) {
                     window.Cudi.ui.updateChatHeader(realId);
                     window.Cudi.ui.renderRecentChats();

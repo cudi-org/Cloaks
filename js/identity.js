@@ -52,8 +52,8 @@ const identityManager = {
                     this.saveProfile();
                 }
 
-                if (window.Cudi && window.Cudi.state) {
-                    window.Cudi.state.myId = this.profile.myId;
+                if (window.Cudi && window.Cudi.store) {
+                    window.Cudi.store.setState({ myId: this.profile.myId });
                 }
 
                 this.updateUI();
@@ -94,7 +94,9 @@ const identityManager = {
             this.updatePrivacyLabel();
         }
 
-        window.Cudi.state.localAlias = this.profile.name || "";
+        if (window.Cudi && window.Cudi.store) {
+            window.Cudi.store.setState({ localAlias: this.profile.name || "" });
+        }
 
         const aliasInput = document.getElementById('aliasInput');
         if (aliasInput && this.profile.name) {

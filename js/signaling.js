@@ -30,30 +30,36 @@ window.Cudi.connectToSignaling = function () {
 
     if (state.socket && state.socket.readyState === WebSocket.CONNECTING) return;
 
+    let socket;
     try {
-        state.socket = new WebSocket(window.Cudi.SIGNALING_SERVER_URL);
+        socket = new WebSocket(window.Cudi.SIGNALING_SERVER_URL);
+        window.Cudi.store.setState({ socket: socket });
     } catch {
         window.Cudi.showToast('Cannot connect to signaling server', 'error');
         return;
     }
 
-    state.socket.onopen = () => {
+    socket.onopen = () => {
         window.Cudi.registerOrJoin();
 
-        while (state.mensajePendiente.length > 0) {
-            const msg = state.mensajePendiente.shift();
-            state.socket.send(msg);
+        const currentState = window.Cudi.state;
+        while (currentState.mensajePendiente && currentState.mensajePendiente.length > 0) {
+            const msg = currentState.mensajePendiente.shift();
+            socket.send(msg);
         }
+        window.Cudi.store.setState({ mensajePendiente: currentState.mensajePendiente });
 
-        if (state.heartbeatInterval) clearInterval(state.heartbeatInterval);
-        state.heartbeatInterval = setInterval(() => {
-            if (state.socket.readyState === WebSocket.OPEN) {
-                state.socket.send(JSON.stringify({ type: 'ping', appType: window.Cudi.appType }));
+        if (currentState.heartbeatInterval) clearInterval(currentState.heartbeatInterval);
+        const intervalId = setInterval(() => {
+            const freshState = window.Cudi.state;
+            if (freshState.socket && freshState.socket.readyState === WebSocket.OPEN) {
+                freshState.socket.send(JSON.stringify({ type: 'ping', appType: window.Cudi.appType }));
             }
         }, 30000);
+        window.Cudi.store.setState({ heartbeatInterval: intervalId });
     };
 
-    state.socket.onmessage = async (event) => {
+    socket.onmessage = async (event) => {
         try {
             const dataStr = typeof event.data === 'string' ? event.data : await event.data.text();
             const data = JSON.parse(dataStr);
@@ -76,9 +82,11 @@ window.Cudi.connectToSignaling = function () {
                     window.Cudi.ui.setChatStatus(targetId, 'connecting');
                 }
 
-                if (window.Cudi.state.activeFinds.has(targetId)) {
-                    clearTimeout(window.Cudi.state.activeFinds.get(targetId));
-                    window.Cudi.state.activeFinds.delete(targetId);
+                const currentState = window.Cudi.state;
+                if (currentState.activeFinds.has(targetId)) {
+                    clearTimeout(currentState.activeFinds.get(targetId));
+                    currentState.activeFinds.delete(targetId);
+                    window.Cudi.store.setState({ activeFinds: currentState.activeFinds });
                 }
 
                 if (window.Cudi.iniciarHandshakeWebRTC) {
@@ -92,14 +100,18 @@ window.Cudi.connectToSignaling = function () {
         }
     };
 
-    state.socket.onerror = () => {
+    socket.onerror = () => {
         // Socket error handled by connection status changes
     };
 
-    state.socket.onclose = () => {
-        if (window.Cudi.state.heartbeatInterval) clearInterval(window.Cudi.state.heartbeatInterval);
+    socket.onclose = () => {
+        const currentState = window.Cudi.state;
+        if (currentState.heartbeatInterval) {
+            clearInterval(currentState.heartbeatInterval);
+            window.Cudi.store.setState({ heartbeatInterval: null });
+        }
 
-        if (window.location.hash || window.Cudi.state.salaId) {
+        if (window.location.hash || currentState.salaId) {
             setTimeout(() => {
                 window.Cudi.connectToSignaling();
             }, 3000);
@@ -159,7 +171,8 @@ window.Cudi.enviarSocket = function (obj) {
     if (state.socket && state.socket.readyState === WebSocket.OPEN) {
         state.socket.send(payloadJson);
     } else {
-        state.mensajePendiente.push(payloadJson);
+        const pending = [...(state.mensajePendiente || []), payloadJson];
+        window.Cudi.store.setState({ mensajePendiente: pending });
     }
 };
 
@@ -174,13 +187,16 @@ window.Cudi.findPeer = function (peerId) {
     });
 
     const timeoutId = setTimeout(() => {
-        if (state.activeFinds.has(peerId)) {
-            state.activeFinds.delete(peerId);
+        const currentState = window.Cudi.state;
+        if (currentState.activeFinds.has(peerId)) {
+            currentState.activeFinds.delete(peerId);
+            window.Cudi.store.setState({ activeFinds: currentState.activeFinds });
             window.Cudi.showToast("The contact is still offline, we'll let you know when it reappears.", "info");
             if (window.Cudi.ui) window.Cudi.ui.renderRecentChats();
         }
     }, 10000);
 
     state.activeFinds.set(peerId, timeoutId);
+    window.Cudi.store.setState({ activeFinds: state.activeFinds });
     if (window.Cudi.ui) window.Cudi.ui.renderRecentChats();
 };

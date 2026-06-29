@@ -119,9 +119,15 @@ export class WebRTCManager {
         const fromId = msg.fromPeerId;
 
         let instance = state.activeChats.get(fromId);
-        if (!instance) {
-            instance = this.crearPeer(false, fromId);
+        if (instance) {
+            try { instance.pc.close(); } catch {
+                // Ignore error on close
+            }
+            state.activeChats.delete(fromId);
+            this.store.setState({ activeChats: state.activeChats });
         }
+
+        instance = this.crearPeer(false, fromId);
 
         instance.pc.setRemoteDescription(new RTCSessionDescription(msg.offer || msg.oferta))
             .then(() => instance.pc.createAnswer())

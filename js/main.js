@@ -245,13 +245,17 @@ if (sendChatBtn && chatInput) {
             return;
         }
         const state = window.Cudi.state;
-        const peerId = state.currentPeerId;
+        let peerId = state.currentPeerId;
         if (!peerId) {
             const firstPeerId = state.activeChats.keys().next().value;
-            if (firstPeerId) state.currentPeerId = firstPeerId;
-            else return;
+            if (firstPeerId) {
+                window.Cudi.store.setState({ currentPeerId: firstPeerId });
+                peerId = firstPeerId;
+            } else {
+                return;
+            }
         }
-        const instance = state.activeChats.get(state.currentPeerId);
+        const instance = state.activeChats.get(peerId);
         const myAlias = state.localAlias;
         const payload = {
             type: "chat",
@@ -263,10 +267,10 @@ if (sendChatBtn && chatInput) {
         };
         if (instance && instance.dc && instance.dc.readyState === "open") {
             instance.dc.send(JSON.stringify(payload));
-            window.Cudi.appendMessage(state.currentPeerId, payload);
+            window.Cudi.appendMessage(peerId, payload);
         } else {
             payload.status = "pending";
-            window.Cudi.appendMessage(state.currentPeerId, payload);
+            window.Cudi.appendMessage(peerId, payload);
         }
         window.Cudi.displayChatMessage(message, "sent", myAlias);
         chatInput.value = "";
@@ -491,7 +495,7 @@ if (aliasInput) {
     aliasInput.addEventListener("change", () => {
         const val = aliasInput.value.trim();
         localStorage.setItem("cudi_alias", val);
-        window.Cudi.state.localAlias = val;
+        window.Cudi.store.setState({ localAlias: val });
         if (window.Cudi.broadcastProfile) window.Cudi.broadcastProfile();
     });
 }
