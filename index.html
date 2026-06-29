@@ -144,15 +144,15 @@
               </div>
 
               <form id="form-send" onsubmit="return false;" class="entry-controls hidden">
-                <input type="text" id="aliasInput" placeholder="Your Alias" class="cloaks-input">
-                <input type="text" id="customRoomInput" placeholder="Room Code (Opt)" class="cloaks-input">
+                <input type="text" id="aliasInput" placeholder="Your Alias" class="cloaks-input" autocomplete="username">
+                <input type="text" id="customRoomInput" placeholder="Room Code (Opt)" class="cloaks-input" autocomplete="off">
                 <input type="password" id="roomPasswordInput" placeholder="Room Password (Opt)" class="cloaks-input"
                   autocomplete="new-password">
                 <button id="btnCreate" class="cloaks-btn-primary">Start Room</button>
               </form>
 
               <form id="form-receive" onsubmit="return false;" class="entry-controls hidden">
-                <input type="text" id="codigoSala" placeholder="Enter Room Code" class="cloaks-input">
+                <input type="text" id="codigoSala" placeholder="Enter Room Code" class="cloaks-input" autocomplete="off">
                 <input type="password" id="joinPasswordInput" placeholder="Room Password (if locked)"
                   class="cloaks-input" autocomplete="current-password">
                 <button id="unirseBtn" class="cloaks-btn-primary">Join Room</button>
@@ -209,7 +209,7 @@
       <footer class="chat-input-area hidden">
         <div class="input-wrapper">
           <button class="attach-btn">+</button>
-          <input type="text" id="chatInput" placeholder="Message #welcome" disabled>
+          <input type="text" id="chatInput" placeholder="Message #welcome" disabled autocomplete="off">
           <button id="sendChatBtn" class="send-btn" disabled>
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />

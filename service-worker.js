@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cudi-sync-v4';
+const CACHE_NAME = 'cudi-sync-v5';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -14,11 +14,12 @@ const ASSETS_TO_CACHE = [
     './js/file-transfer.js',
     './js/commands.js',
     './js/community.js',
-    './js/cptp.js',
     './js/dictionary.js',
     './js/identity.js',
     './js/opfs.js',
     './js/presence.js',
+    './js/Store.js',
+    './js/WebRTCManager.js',
     './manifest.json',
     './icons/logo_matrix_v2.png',
     './icons/official_info.png'
