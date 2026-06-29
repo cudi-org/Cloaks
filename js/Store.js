@@ -33,6 +33,8 @@ export const globalStore = new Store({
     dataChannel: null,
     salaId: null,
     modo: null,
+    mensajePendiente: [],
+    heartbeatInterval: null,
     isRoomLocked: false,
     archivoParaEnviar: null,
     enviarArchivoPendiente: false,

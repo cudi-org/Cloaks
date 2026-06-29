@@ -48,7 +48,7 @@ export class WebRTCManager {
 
         pc.onconnectionstatechange = () => {
             if (pc.connectionState === "connected") {
-                if (this.ui) this.ui.showToast(`Connected to ${targetId}`, "success");
+                if (window.Cudi && window.Cudi.showToast) window.Cudi.showToast(`Connected to ${targetId}`, "success");
             }
             if (pc.connectionState === "closed" || pc.connectionState === "failed") {
                 const s = this.store.getState();
@@ -93,7 +93,7 @@ export class WebRTCManager {
 
         instance.dc = channel;
         instance.dc.onopen = () => {
-            if (this.ui) this.ui.showToast("Secure channel established.", "success");
+            if (window.Cudi && window.Cudi.showToast) window.Cudi.showToast("Secure channel established.", "success");
             this.store.setState({ currentPeerId: peerId });
 
             if (typeof document !== 'undefined') {
@@ -148,7 +148,7 @@ export class WebRTCManager {
             const videoTracks = this.localStream.getVideoTracks();
             if (videoTracks.length > 0 && videoTracks[0].enabled) {
                 videoTracks[0].enabled = false;
-                if (this.ui) this.ui.showToast("Video paused due to high number of participants.", "warning");
+                if (window.Cudi && window.Cudi.showToast) window.Cudi.showToast("Video paused due to high number of participants.", "warning");
 
                 const btnToggleVideo = document.getElementById('btnToggleVideo');
                 if (btnToggleVideo) {
