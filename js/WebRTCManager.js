@@ -96,6 +96,12 @@ export class WebRTCManager {
             if (window.Cudi && window.Cudi.showToast) window.Cudi.showToast("Secure channel established.", "success");
             this.store.setState({ currentPeerId: peerId });
 
+            if (this.ui) {
+                if (this.ui.setChatStatus) this.ui.setChatStatus(peerId, 'online');
+                if (this.ui.renderRecentChats) this.ui.renderRecentChats();
+                if (this.ui.updateMemberSidebar) this.ui.updateMemberSidebar();
+            }
+
             if (typeof document !== 'undefined') {
                 const chatInput = document.getElementById("chatInput");
                 const sendChatBtn = document.getElementById("sendChatBtn");

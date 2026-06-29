@@ -293,6 +293,13 @@ window.Cudi.manejarMensaje = function (mensaje) {
 
         case "peer_left": {
             const leftId = mensaje.peerId;
+            const instance = state.activeChats.get(leftId);
+            const active = instance && instance.pc && 
+                           (instance.pc.connectionState === 'connected' || instance.pc.connectionState === 'connecting');
+            if (active) {
+                break;
+            }
+
             state.sessionPeers.delete(leftId);
             state.peers.delete(leftId);
 
@@ -820,3 +827,5 @@ window.Cudi.handleCallAccepted = function (mensaje) {
         window.Cudi.startVoiceOnly();
     }
 };
+
+window.Cudi.manejarChunk = manejarChunk;
