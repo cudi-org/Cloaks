@@ -71,6 +71,7 @@ window.Cudi = window.Cudi || {};
                 await writable.write({ type: 'write', data: JSON.stringify(msg) + '\n', position: file.size });
                 await writable.close();
             } catch {
+                // Ignore write error
             } finally {
                 isWriting = false;
             }
@@ -96,6 +97,7 @@ window.Cudi = window.Cudi || {};
                 entries.sort((a, b) => b.lastModified - a.lastModified);
                 return entries.map(e => e.peerId);
             } catch {
+                // Ignore read error
             }
             return chats;
         },
@@ -119,6 +121,7 @@ window.Cudi = window.Cudi || {};
                 await writable.write(JSON.stringify(cache));
                 await writable.close();
             } catch {
+                // Ignore save error
             }
         },
 
@@ -189,6 +192,7 @@ window.Cudi = window.Cudi || {};
                     }
                 }
             } catch {
+                // Ignore cleanup error
             }
         }
     };

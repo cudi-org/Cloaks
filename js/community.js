@@ -517,6 +517,7 @@ const communityManager = {
             await writable.write({ type: 'write', data: JSON.stringify(message) + '\n', position: size });
             await writable.close();
         } catch {
+            // Ignore save error
         }
     },
 
@@ -534,6 +535,7 @@ const communityManager = {
                 }
             });
         } catch {
+            // Ignore load error
         }
     },
 

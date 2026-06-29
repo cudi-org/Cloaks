@@ -88,10 +88,12 @@ window.Cudi.connectToSignaling = function () {
                 window.Cudi.manejarMensaje(data);
             }
         } catch {
+            // Ignore error
         }
     };
 
     state.socket.onerror = () => {
+        // Socket error handled by connection status changes
     };
 
     state.socket.onclose = () => {

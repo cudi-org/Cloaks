@@ -24,7 +24,9 @@ export class WebRTCManager {
             if (existing.pc.connectionState === 'connected' || existing.pc.connectionState === 'connecting') {
                 return existing;
             }
-            try { existing.pc.close(); } catch { }
+            try { existing.pc.close(); } catch {
+                // Ignore error on close
+            }
             activeChats.delete(targetId);
         }
 
@@ -167,7 +169,9 @@ export class WebRTCManager {
                 try {
                     instance.pc.close();
                     instance.pc = null;
-                } catch { }
+                } catch {
+                    // Ignore error on close
+                }
                 state.activeChats.delete(peerId);
                 changed = true;
             }
