@@ -54,6 +54,7 @@ window.Cudi.crearPeer = function (isOffer, targetId = null) {
         }
 
         try { existing.pc.close(); } catch {
+            // Ignore error on close
         }
         state.activeChats.delete(targetId);
     }
@@ -210,6 +211,7 @@ window.Cudi.setupDataChannel = function (channel, peerId) {
                 return;
             }
         } catch {
+            // Ignore JSON parsing errors for non-JSON payloads
         }
 
         manejarChunk(event.data, peerId);
@@ -431,6 +433,7 @@ async function manejarChunk(data, peerId) {
 
 
         } catch {
+            // Ignore message handling error
         }
     } else {
         if (data instanceof Blob) {
@@ -459,6 +462,7 @@ window.Cudi.renegotiate = async function (targetPeerId = null) {
                 targetPeerId: peerId
             });
         } catch {
+            // Ignore renegotiation error
         }
     };
 
@@ -466,7 +470,6 @@ window.Cudi.renegotiate = async function (targetPeerId = null) {
         await doRenegotiate(targetPeerId, state.activeChats.get(targetPeerId));
     } else if (state.currentPeerId) {
         await doRenegotiate(state.currentPeerId, state.activeChats.get(state.currentPeerId));
-    } else {
     }
 };
 
@@ -604,6 +607,7 @@ window.Cudi.stopVoiceOnly = function () {
                 const sender = senders.find(s => s.track === track);
                 if (sender) {
                     try { pc.removeTrack(sender); } catch {
+                        // Ignore track removal error
                     }
                 }
             }
@@ -626,6 +630,7 @@ window.Cudi.stopVideo = function () {
                 const sender = senders.find(s => s.track === track);
                 if (sender) {
                     try { pc.removeTrack(sender); } catch {
+                        // Ignore track removal error
                     }
                 }
             }
@@ -676,7 +681,11 @@ window.Cudi.startScreenShare = async function () {
                 if (sender) sender.replaceTrack(camTrack);
                 document.getElementById('localVideo').srcObject = window.Cudi.localStream;
             } else {
-                if (sender) try { state.peer.removeTrack(sender); } catch { }
+                if (sender) {
+                    try { state.peer.removeTrack(sender); } catch {
+                        // Ignore track removal error
+                    }
+                }
                 window.Cudi.stopVideo();
                 window.Cudi.renegotiate();
             }
